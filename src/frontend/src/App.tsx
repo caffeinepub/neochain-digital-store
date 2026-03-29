@@ -19,6 +19,9 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPanel from "./pages/AdminPanel";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import RefundPage from "./pages/RefundPage";
+import TermsPage from "./pages/TermsPage";
 
 function RootLayout() {
   const { identity, loginStatus } = useInternetIdentity();
@@ -134,11 +137,29 @@ const adminRoute = createRoute({
   path: "/admin",
   component: ProtectedAdmin,
 });
+const privacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/privacy",
+  component: PrivacyPage,
+});
+const refundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/refund",
+  component: RefundPage,
+});
+const termsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/terms",
+  component: TermsPage,
+});
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   dashboardRoute,
   adminRoute,
+  privacyRoute,
+  refundRoute,
+  termsRoute,
 ]);
 const router = createRouter({ routeTree });
 

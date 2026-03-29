@@ -11,6 +11,14 @@ export default function Navbar() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
+  const [walletDefaultTab, setWalletDefaultTab] = useState<
+    "deposit" | "withdraw"
+  >("deposit");
+
+  const openWallet = (tab: "deposit" | "withdraw" = "deposit") => {
+    setWalletDefaultTab(tab);
+    setWalletOpen(true);
+  };
 
   const navLinks = [
     { label: "Store", to: "/" },
@@ -45,16 +53,12 @@ export default function Navbar() {
               className="flex items-center gap-2 group"
               data-ocid="nav.link"
             >
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center font-display font-black text-sm"
-                style={{
-                  background:
-                    "linear-gradient(135deg, oklch(0.82 0.18 210), oklch(0.52 0.22 280))",
-                  boxShadow: "0 0 20px rgba(38, 214, 255, 0.5)",
-                }}
-              >
-                N
-              </div>
+              <img
+                src="/assets/generated/neochain-logo-transparent.dim_200x200.png"
+                alt="NeoChain Logo"
+                className="w-8 h-8 rounded-lg object-cover"
+                style={{ boxShadow: "0 0 20px rgba(38, 214, 255, 0.5)" }}
+              />
               <span
                 className="font-display font-black text-xl tracking-widest uppercase"
                 style={{ letterSpacing: "0.2em" }}
@@ -91,7 +95,7 @@ export default function Navbar() {
                       border: "1px solid rgba(38, 214, 255, 0.3)",
                       boxShadow: "0 0 12px rgba(38, 214, 255, 0.15)",
                     }}
-                    onClick={() => setWalletOpen(true)}
+                    onClick={() => openWallet("deposit")}
                     data-ocid="nav.panel"
                   >
                     <span className="text-muted-foreground text-xs">₹</span>
@@ -103,7 +107,7 @@ export default function Navbar() {
                   {/* Wallet Button */}
                   <button
                     type="button"
-                    onClick={() => setWalletOpen(true)}
+                    onClick={() => openWallet("deposit")}
                     className="neon-btn flex items-center gap-1.5 px-3 py-2 text-sm"
                     style={{
                       borderColor: "rgba(38, 214, 255, 0.4)",
@@ -115,6 +119,21 @@ export default function Navbar() {
                     <span className="hidden md:inline text-xs font-semibold">
                       Wallet
                     </span>
+                  </button>
+
+                  {/* Withdraw Button */}
+                  <button
+                    type="button"
+                    onClick={() => openWallet("withdraw")}
+                    className="hidden sm:flex neon-btn items-center gap-1.5 px-3 py-2 text-sm"
+                    style={{
+                      borderColor: "rgba(201, 60, 255, 0.4)",
+                      boxShadow: "0 0 12px rgba(201, 60, 255, 0.15)",
+                      color: "oklch(0.78 0.22 310)",
+                    }}
+                    data-ocid="withdraw.open_modal_button"
+                  >
+                    <span className="text-xs font-semibold">Withdraw</span>
                   </button>
                 </>
               )}
@@ -209,7 +228,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => {
-                      setWalletOpen(true);
+                      openWallet("deposit");
                       setMenuOpen(false);
                     }}
                     className="neon-btn flex items-center gap-2 px-4 py-2 text-sm w-full"
@@ -231,6 +250,7 @@ export default function Navbar() {
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
         userProfile={userProfile ?? null}
+        defaultTab={walletDefaultTab}
       />
     </>
   );

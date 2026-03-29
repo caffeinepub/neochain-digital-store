@@ -4,14 +4,17 @@ import {
   CreditCard,
   Eye,
   Loader2,
+  Plus,
   ShieldCheck,
+  Target,
+  Trash2,
   Upload,
   Users,
   X,
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TransactionStatus, type UserRole } from "../backend.d";
 import type { PaymentMethod, Transaction } from "../backend.d";
@@ -45,7 +48,33 @@ type AdminTab =
   | "purchases"
   | "deposits"
   | "withdrawals"
-  | "payments";
+  | "payments"
+  | "ads";
+
+interface AdTask {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  taskLink: string;
+  rewardAmount: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+function getAdTasks(): AdTask[] {
+  try {
+    const raw = localStorage.getItem("neochain_ad_tasks");
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveAdTasks(tasks: AdTask[]) {
+  localStorage.setItem("neochain_ad_tasks", JSON.stringify(tasks));
+  window.dispatchEvent(new Event("storage"));
+}
 
 interface MethodData {
   qrBase64: string | null;
@@ -271,6 +300,357 @@ function TxDetailModal({
   );
 }
 
+function AdsTasksTab() {
+  const [tasks, setTasks] = useState<AdTask[]>(() => getAdTasks());
+  const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<AdTask | null>(null);
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    imageUrl: "",
+    taskLink: "",
+    rewardAmount: "",
+    isActive: true,
+  });
+
+  const refreshTasks = () => setTasks(getAdTasks());
+
+  useEffect(() => {
+    const onStorage = () => setTasks(getAdTasks());
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const resetForm = () => {
+    setForm({
+      title: "",
+      description: "",
+      imageUrl: "",
+      taskLink: "",
+      rewardAmount: "",
+      isActive: true,
+    });
+    setEditingTask(null);
+    setShowForm(false);
+  };
+
+  const startEdit = (task: AdTask) => {
+    setEditingTask(task);
+    setForm({
+      title: task.title,
+      description: task.description,
+      imageUrl: task.imageUrl,
+      taskLink: task.taskLink,
+      rewardAmount: String(task.rewardAmount),
+      isActive: task.isActive,
+    });
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
+    if (!form.title || !form.taskLink || !form.rewardAmount) return;
+    const all = getAdTasks();
+    if (editingTask) {
+      const updated = all.map((t) =>
+        t.id === editingTask.id
+          ? { ...t, ...form, rewardAmount: Number(form.rewardAmount) }
+          : t,
+      );
+      saveAdTasks(updated);
+    } else {
+      const newTask: AdTask = {
+        id: Date.now().toString(),
+        title: form.title,
+        description: form.description,
+        imageUrl: form.imageUrl,
+        taskLink: form.taskLink,
+        rewardAmount: Number(form.rewardAmount),
+        isActive: form.isActive,
+        createdAt: new Date().toISOString(),
+      };
+      saveAdTasks([...all, newTask]);
+    }
+    refreshTasks();
+    resetForm();
+  };
+
+  const handleDelete = (id: string) => {
+    saveAdTasks(getAdTasks().filter((t) => t.id !== id));
+    refreshTasks();
+  };
+
+  const handleToggle = (id: string) => {
+    const updated = getAdTasks().map((t) =>
+      t.id === id ? { ...t, isActive: !t.isActive } : t,
+    );
+    saveAdTasks(updated);
+    refreshTasks();
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display font-bold text-2xl mb-1 gradient-text">
+            Ads Task Management
+          </h2>
+          <p className="text-muted-foreground text-sm">
+            Create and manage promotional tasks for users. Users earn rewards
+            upon completion.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setEditingTask(null);
+            setShowForm(!showForm);
+          }}
+          className="neon-btn-primary flex items-center gap-2 px-4 py-2 text-sm shrink-0"
+          data-ocid="ads.open_modal_button"
+        >
+          <Plus className="w-4 h-4" />
+          New Task
+        </button>
+      </div>
+
+      {showForm && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-5 rounded-2xl space-y-4"
+          style={{
+            background: "rgba(7,8,26,0.95)",
+            border: "1px solid rgba(123,77,255,0.4)",
+          }}
+          data-ocid="ads.modal"
+        >
+          <h3 className="font-display font-bold text-lg">
+            {editingTask ? "Edit Task" : "Create New Task"}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="ads-title"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+              >
+                Title *
+              </label>
+              <input
+                id="ads-title"
+                type="text"
+                className="neon-input w-full px-4 py-2.5 text-sm"
+                placeholder="Task title"
+                value={form.title}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, title: e.target.value }))
+                }
+                data-ocid="ads.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ads-reward"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+              >
+                Reward Amount (₹) *
+              </label>
+              <input
+                id="ads-reward"
+                type="number"
+                className="neon-input w-full px-4 py-2.5 text-sm"
+                placeholder="e.g. 50"
+                value={form.rewardAmount}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, rewardAmount: e.target.value }))
+                }
+                data-ocid="ads.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ads-link"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+              >
+                Task Link *
+              </label>
+              <input
+                id="ads-link"
+                type="url"
+                className="neon-input w-full px-4 py-2.5 text-sm"
+                placeholder="https://..."
+                value={form.taskLink}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, taskLink: e.target.value }))
+                }
+                data-ocid="ads.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="ads-img"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+              >
+                Image URL (optional)
+              </label>
+              <input
+                id="ads-img"
+                type="url"
+                className="neon-input w-full px-4 py-2.5 text-sm"
+                placeholder="https://image.url/..."
+                value={form.imageUrl}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, imageUrl: e.target.value }))
+                }
+                data-ocid="ads.input"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label
+                htmlFor="ads-desc"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+              >
+                Description
+              </label>
+              <textarea
+                id="ads-desc"
+                className="neon-input w-full px-4 py-2.5 text-sm resize-none"
+                rows={2}
+                placeholder="Describe what user needs to do..."
+                value={form.description}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, description: e.target.value }))
+                }
+                data-ocid="ads.textarea"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(v) => setForm((p) => ({ ...p, isActive: v }))}
+              data-ocid="ads.switch"
+            />
+            <span className="text-sm text-muted-foreground">
+              Active (visible to users)
+            </span>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="neon-btn-primary px-6 py-2.5 text-sm font-semibold"
+              data-ocid="ads.save_button"
+            >
+              {editingTask ? "Update Task" : "Create Task"}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="neon-btn px-6 py-2.5 text-sm"
+              data-ocid="ads.cancel_button"
+            >
+              Cancel
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {tasks.length === 0 ? (
+        <div
+          className="py-16 text-center text-muted-foreground rounded-2xl"
+          style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px dashed rgba(255,255,255,0.1)",
+          }}
+          data-ocid="ads.empty_state"
+        >
+          No ad tasks yet. Create your first task to start rewarding users.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {tasks.map((task, idx) => (
+            <div
+              key={task.id}
+              className="rounded-2xl overflow-hidden"
+              style={{
+                background: "rgba(7,8,26,0.85)",
+                border: task.isActive
+                  ? "1px solid rgba(255,193,7,0.3)"
+                  : "1px solid rgba(255,255,255,0.08)",
+              }}
+              data-ocid={`ads.item.${idx + 1}`}
+            >
+              {task.imageUrl && (
+                <div className="h-28 overflow-hidden">
+                  <img
+                    src={task.imageUrl}
+                    alt={task.title}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-display font-bold text-sm">
+                    {task.title}
+                  </h4>
+                  <span
+                    className="shrink-0 text-xs px-2 py-0.5 rounded-full font-bold"
+                    style={{
+                      background: "rgba(255,193,7,0.15)",
+                      color: "oklch(0.85 0.18 85)",
+                    }}
+                  >
+                    ₹{task.rewardAmount}
+                  </span>
+                </div>
+                {task.description && (
+                  <p className="text-muted-foreground text-xs">
+                    {task.description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <Switch
+                    checked={task.isActive}
+                    onCheckedChange={() => handleToggle(task.id)}
+                    data-ocid="ads.switch"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {task.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(task)}
+                    className="flex-1 neon-btn flex items-center justify-center gap-1.5 py-2 text-xs"
+                    data-ocid="ads.edit_button"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(task.id)}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs transition-all"
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      color: "oklch(0.65 0.25 25)",
+                    }}
+                    data-ocid="ads.delete_button"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
@@ -298,6 +678,7 @@ export default function AdminPanel() {
     { id: "deposits", label: "Deposits", icon: Activity },
     { id: "withdrawals", label: "Withdrawals", icon: Activity },
     { id: "payments", label: "QR Payments", icon: CreditCard },
+    { id: "ads", label: "Ads Tasks", icon: Target },
   ];
 
   const handleApprove = async (id: bigint) => {
@@ -929,6 +1310,9 @@ export default function AdminPanel() {
           </div>
         </motion.div>
       )}
+
+      {/* Ads Tasks Tab */}
+      {activeTab === "ads" && <AdsTasksTab />}
 
       {/* Transaction Detail Modal */}
       {viewTx && <TxDetailModal tx={viewTx} onClose={() => setViewTx(null)} />}

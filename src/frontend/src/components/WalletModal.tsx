@@ -39,6 +39,7 @@ interface WalletModalProps {
   open: boolean;
   onClose: () => void;
   userProfile: UserProfile | null;
+  defaultTab?: "deposit" | "withdraw";
 }
 
 function FieldLabel({
@@ -109,6 +110,7 @@ export default function WalletModal({
   open,
   onClose,
   userProfile,
+  defaultTab = "deposit",
 }: WalletModalProps) {
   const deposit = useDeposit();
   const withdraw = useWithdraw();
@@ -258,7 +260,7 @@ export default function WalletModal({
         </DialogHeader>
 
         <div className="px-6 pb-6 pt-4 max-h-[75vh] overflow-y-auto">
-          <Tabs defaultValue="deposit">
+          <Tabs defaultValue={defaultTab}>
             <TabsList
               className="grid grid-cols-2 w-full mb-6"
               style={{
@@ -535,6 +537,30 @@ export default function WalletModal({
                         data-ocid="withdraw.input"
                       />
                     </div>
+
+                    {/* Fee info */}
+                    {wFields.amount && Number(wFields.amount) > 0 && (
+                      <div
+                        className="p-3 rounded-xl text-xs space-y-1"
+                        style={{
+                          background: "rgba(201, 60, 255, 0.06)",
+                          border: "1px solid rgba(201, 60, 255, 0.2)",
+                        }}
+                      >
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Withdrawal Fee (12%)</span>
+                          <span className="text-red-400">
+                            -₹{(Number(wFields.amount) * 0.12).toFixed(2)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                          <span>You Receive</span>
+                          <span className="neon-text-cyan">
+                            ₹{(Number(wFields.amount) * 0.88).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
 
