@@ -1,13 +1,14 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  CalendarDays,
   Check,
   Copy,
-  DollarSign,
   ExternalLink,
   Loader2,
   Lock,
   RefreshCw,
+  Star,
   TrendingUp,
   Wallet,
 } from "lucide-react";
@@ -34,6 +35,40 @@ const PAYMENT_METHODS_DEFAULT = [
   "Bybit Pay",
 ];
 
+const WITHDRAW_METHODS = [
+  "eSewa",
+  "Khalti",
+  "Paytm",
+  "PhonePe",
+  "Google Pay",
+  "SBI Bank",
+  "HDFC Bank",
+];
+
+function isBankMethod(method: string) {
+  return method === "SBI Bank" || method === "HDFC Bank";
+}
+
+function getIdLabel(method: string): string {
+  switch (method) {
+    case "eSewa":
+      return "eSewa ID";
+    case "Khalti":
+      return "Khalti ID";
+    case "Paytm":
+      return "Paytm Number or UPI ID";
+    case "PhonePe":
+      return "PhonePe Number or UPI ID";
+    case "Google Pay":
+      return "Google Pay Number or UPI ID";
+    case "SBI Bank":
+    case "HDFC Bank":
+      return "Account Number";
+    default:
+      return "Account / ID";
+  }
+}
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
@@ -52,19 +87,36 @@ function StatusBadge({ status }: { status: string }) {
 
 function TypeBadge({ txType }: { txType: string }) {
   const icons: Record<string, string> = {
-    deposit: "\u2191",
-    withdrawal: "\u2193",
-    referral_bonus: "\u2605",
-    purchase: "\u25c8",
+    deposit: "↑",
+    withdrawal: "↓",
+    referral_bonus: "★",
+    purchase: "◈",
   };
   const label = txType.replace("_", " ");
   return (
     <span className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground">
-      <span className="neon-text-cyan">{icons[txType] ?? "\u2022"}</span>{" "}
-      {label}
+      <span className="neon-text-cyan">{icons[txType] ?? "•"}</span> {label}
     </span>
   );
 }
+
+type WithdrawFields = {
+  method: string;
+  name: string;
+  id: string;
+  ifsc: string;
+  branch: string;
+  amount: string;
+};
+
+const EMPTY_WITHDRAW: WithdrawFields = {
+  method: "",
+  name: "",
+  id: "",
+  ifsc: "",
+  branch: "",
+  amount: "",
+};
 
 export default function Dashboard() {
   const {
@@ -81,13 +133,11 @@ export default function Dashboard() {
   const [dTxId, setDTxId] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState("");
+  const [dScreenshot, setDScreenshot] = useState<File | null>(null);
 
-  const [wName, setWName] = useState("");
-  const [wAccountId, setWAccountId] = useState("");
-  const [wBankName, setWBankName] = useState("");
-  const [wIfsc, setWIfsc] = useState("");
-  const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [withdrawMethod, setWithdrawMethod] = useState("");
+  const [wFields, setWFields] = useState<WithdrawFields>(EMPTY_WITHDRAW);
+  const setW = (key: keyof WithdrawFields, val: string) =>
+    setWFields((prev) => ({ ...prev, [key]: val }));
 
   const [copied, setCopied] = useState(false);
 
@@ -97,6 +147,7 @@ export default function Dashboard() {
       : PAYMENT_METHODS_DEFAULT;
 
   const myTxs: Transaction[] = transactions ?? [];
+
   const hasApprovedPurchase = myTxs.some(
     (tx) =>
       String(tx.status) === TransactionStatus.approved &&
@@ -107,6 +158,36 @@ export default function Dashboard() {
   const referralLink = referralActive
     ? `${window.location.origin}/?ref=${userProfile?.referralCode}`
     : null;
+
+  // Income calculations
+  const now = Date.now();
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfWeek = new Date(now - 7 * 24 * 60 * 60 * 1000);
+  const startOfMonth = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+  const approvedTxs = myTxs.filter(
+    (tx) => String(tx.status) === TransactionStatus.approved,
+  );
+
+  function sumIncome(from: Date): number {
+    return approvedTxs
+      .filter((tx) => {
+        const ts = Number(tx.createdAt) / 1_000_000;
+        return (
+          ts >= from.getTime() &&
+          (String(tx.txType) === TransactionType.deposit ||
+            String(tx.txType) === "referral_bonus" ||
+            String(tx.txType) === TransactionType.purchase)
+        );
+      })
+      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+  }
+
+  const todayIncome = sumIncome(startOfToday);
+  const weeklyIncome = sumIncome(startOfWeek);
+  const monthlyIncome = sumIncome(startOfMonth);
+  const totalReferralEarnings = Number(userProfile?.referralEarnings ?? 0n);
 
   const handleCopyReferral = () => {
     if (!referralLink) return;
@@ -134,6 +215,7 @@ export default function Dashboard() {
       setDTxId("");
       setDepositAmount("");
       setDepositMethod("");
+      setDScreenshot(null);
       refetchProfile();
     } catch {
       toast.error("Deposit failed. Please try again.");
@@ -142,36 +224,42 @@ export default function Dashboard() {
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wName || !wAccountId || !withdrawAmount || !withdrawMethod) {
-      toast.error("Name, Account ID, Amount, and Payment Method are required");
+    const { method, name, id, ifsc, branch, amount } = wFields;
+    if (!method || !name || !id || !amount) {
+      toast.error("Please fill all required fields");
       return;
     }
-    const amount = BigInt(Math.floor(Number.parseFloat(withdrawAmount)));
-    if (amount <= 0n) {
+    if (isBankMethod(method) && (!ifsc || !branch)) {
+      toast.error("IFSC Code and Branch Name are required for bank withdrawal");
+      return;
+    }
+    const amountBig = BigInt(Math.floor(Number.parseFloat(amount)));
+    if (amountBig <= 0n) {
       toast.error("Invalid amount");
       return;
     }
     const balance = userProfile?.balance ?? 0n;
-    if (amount > balance) {
+    if (amountBig > balance) {
       toast.error(
-        `Insufficient balance. Available: \u20b9${Number(balance).toLocaleString("en-IN")}`,
+        `Insufficient balance. Available: ₹${Number(balance).toLocaleString("en-IN")}`,
       );
       return;
     }
     try {
-      await withdraw.mutateAsync({ amount, paymentMethod: withdrawMethod });
-      toast.success("Withdrawal request submitted!");
-      setWName("");
-      setWAccountId("");
-      setWBankName("");
-      setWIfsc("");
-      setWithdrawAmount("");
-      setWithdrawMethod("");
+      await withdraw.mutateAsync({ amount: amountBig, paymentMethod: method });
+      toast.success(
+        "Withdrawal request submitted! Admin will process it shortly.",
+      );
+      setWFields(EMPTY_WITHDRAW);
       refetchProfile();
     } catch {
       toast.error("Withdrawal failed. Please try again.");
     }
   };
+
+  const inputClass = "neon-input w-full px-4 py-3 text-sm";
+  const labelClass =
+    "block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -193,8 +281,8 @@ export default function Dashboard() {
         )}
       </motion.div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+      {/* Main Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -219,8 +307,8 @@ export default function Dashboard() {
               data-ocid="dashboard.loading_state"
             />
           ) : (
-            <div className="font-display font-black text-3xl neon-text-cyan">
-              \u20b9{Number(userProfile?.balance ?? 0n).toLocaleString("en-IN")}
+            <div className="font-display font-black text-2xl sm:text-3xl neon-text-cyan">
+              ₹{Number(userProfile?.balance ?? 0n).toLocaleString("en-IN")}
             </div>
           )}
           <div className="text-muted-foreground text-xs mt-1">
@@ -242,7 +330,7 @@ export default function Dashboard() {
               className="w-8 h-8 rounded-lg flex items-center justify-center"
               style={{ background: "rgba(201,60,255,0.1)" }}
             >
-              <DollarSign className="w-4 h-4 neon-text-magenta" />
+              <Star className="w-4 h-4 neon-text-magenta" />
             </div>
           </div>
           {profileLoading ? (
@@ -251,11 +339,8 @@ export default function Dashboard() {
               style={{ background: "rgba(123,77,255,0.15)" }}
             />
           ) : (
-            <div className="font-display font-black text-3xl neon-text-magenta">
-              \u20b9
-              {Number(userProfile?.referralEarnings ?? 0n).toLocaleString(
-                "en-IN",
-              )}
+            <div className="font-display font-black text-2xl sm:text-3xl neon-text-magenta">
+              ₹{totalReferralEarnings.toLocaleString("en-IN")}
             </div>
           )}
           <div className="text-muted-foreground text-xs mt-1">
@@ -280,7 +365,7 @@ export default function Dashboard() {
               <RefreshCw className="w-4 h-4 neon-text-cyan" />
             </div>
           </div>
-          <div className="font-display font-black text-3xl neon-text-cyan">
+          <div className="font-display font-black text-2xl sm:text-3xl neon-text-cyan">
             {myTxs.length}
           </div>
           <div className="text-muted-foreground text-xs mt-1">All time</div>
@@ -319,6 +404,105 @@ export default function Dashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* Income Section - Today / Weekly / Monthly */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28 }}
+        className="mb-8"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: "rgba(38,214,255,0.1)",
+              border: "1px solid rgba(38,214,255,0.25)",
+            }}
+          >
+            <CalendarDays className="w-5 h-5 neon-text-cyan" />
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-xl">Income Overview</h2>
+            <p className="text-muted-foreground text-xs">
+              Your earnings breakdown by time period
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Today */}
+          <div
+            className="relative rounded-2xl p-5 overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
+              border: "1px solid rgba(38,214,255,0.25)",
+              boxShadow: "0 4px 20px rgba(38,214,255,0.08)",
+            }}
+            data-ocid="income.today_card"
+          >
+            <div
+              className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10"
+              style={{ background: "oklch(0.82 0.18 210)" }}
+            />
+            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+              📅 Today
+            </div>
+            <div className="font-display font-black text-3xl neon-text-cyan mb-1">
+              ₹{todayIncome.toLocaleString("en-IN")}
+            </div>
+            <div className="text-muted-foreground text-xs">Earnings today</div>
+          </div>
+
+          {/* Weekly */}
+          <div
+            className="relative rounded-2xl p-5 overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
+              border: "1px solid rgba(123,77,255,0.25)",
+              boxShadow: "0 4px 20px rgba(123,77,255,0.08)",
+            }}
+            data-ocid="income.weekly_card"
+          >
+            <div
+              className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10"
+              style={{ background: "oklch(0.52 0.22 280)" }}
+            />
+            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+              📆 This Week
+            </div>
+            <div className="font-display font-black text-3xl neon-text-violet mb-1">
+              ₹{weeklyIncome.toLocaleString("en-IN")}
+            </div>
+            <div className="text-muted-foreground text-xs">Last 7 days</div>
+          </div>
+
+          {/* Monthly */}
+          <div
+            className="relative rounded-2xl p-5 overflow-hidden"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
+              border: "1px solid rgba(201,60,255,0.25)",
+              boxShadow: "0 4px 20px rgba(201,60,255,0.08)",
+            }}
+            data-ocid="income.monthly_card"
+          >
+            <div
+              className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-10"
+              style={{ background: "oklch(0.7 0.25 310)" }}
+            />
+            <div className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+              📊 This Month
+            </div>
+            <div className="font-display font-black text-3xl neon-text-magenta mb-1">
+              ₹{monthlyIncome.toLocaleString("en-IN")}
+            </div>
+            <div className="text-muted-foreground text-xs">Last 30 days</div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Referral */}
       <motion.div
@@ -470,16 +654,13 @@ export default function Dashboard() {
           </div>
           <form onSubmit={handleDeposit} className="space-y-4">
             <div>
-              <label
-                htmlFor="d-name"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
+              <label htmlFor="d-name" className={labelClass}>
                 Full Name
               </label>
               <input
                 id="d-name"
                 type="text"
-                className="neon-input w-full px-4 py-3"
+                className={inputClass}
                 placeholder="Your full name"
                 value={dName}
                 onChange={(e) => setDName(e.target.value)}
@@ -487,69 +668,86 @@ export default function Dashboard() {
               />
             </div>
             <div>
-              <label
-                htmlFor="d-txid"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
+              <label htmlFor="d-txid" className={labelClass}>
                 Transaction ID <span className="text-red-400">*</span>
               </label>
               <input
                 id="d-txid"
                 type="text"
                 required
-                className="neon-input w-full px-4 py-3"
+                className={inputClass}
                 placeholder="e.g. TXN123456789"
                 value={dTxId}
                 onChange={(e) => setDTxId(e.target.value)}
                 data-ocid="deposit.input"
               />
             </div>
-            <div>
-              <label
-                htmlFor="d-amount"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
-                Amount (\u20b9) <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="d-amount"
-                type="number"
-                min="1"
-                required
-                className="neon-input w-full px-4 py-3"
-                placeholder="Enter amount"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-                data-ocid="deposit.input"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="d-amount" className={labelClass}>
+                  Amount (₹) <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="d-amount"
+                  type="number"
+                  min="1"
+                  required
+                  className={inputClass}
+                  placeholder="Enter amount"
+                  value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value)}
+                  data-ocid="deposit.input"
+                />
+              </div>
+              <div>
+                <label htmlFor="d-method" className={labelClass}>
+                  Method <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="d-method"
+                  required
+                  className={inputClass}
+                  value={depositMethod}
+                  onChange={(e) => setDepositMethod(e.target.value)}
+                  data-ocid="deposit.select"
+                >
+                  <option value="">Select</option>
+                  {paymentMethods.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div>
+              <div className={labelClass}>Payment Screenshot</div>
               <label
-                htmlFor="d-method"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                htmlFor="d-screenshot"
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground"
+                style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px dashed rgba(123, 77, 255, 0.3)",
+                }}
+                data-ocid="deposit.upload_button"
               >
-                Payment Method <span className="text-red-400">*</span>
+                <span>📎</span>
+                {dScreenshot
+                  ? dScreenshot.name
+                  : "Upload screenshot (optional)"}
+                <input
+                  id="d-screenshot"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setDScreenshot(e.target.files?.[0] ?? null)}
+                />
               </label>
-              <select
-                id="d-method"
-                required
-                className="neon-input w-full px-4 py-3"
-                value={depositMethod}
-                onChange={(e) => setDepositMethod(e.target.value)}
-                data-ocid="deposit.select"
-              >
-                <option value="">Select payment method</option>
-                {paymentMethods.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
             </div>
             <button
               type="submit"
               disabled={deposit.isPending}
-              className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2"
+              className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2 font-semibold"
               data-ocid="deposit.submit_button"
             >
               {deposit.isPending ? (
@@ -557,7 +755,9 @@ export default function Dashboard() {
                   <Loader2 className="w-4 h-4 animate-spin" /> Processing...
                 </>
               ) : (
-                "Submit Deposit"
+                <>
+                  <ArrowDownLeft className="w-4 h-4" /> Submit Deposit
+                </>
               )}
             </button>
           </form>
@@ -592,132 +792,140 @@ export default function Dashboard() {
             >
               <span className="text-muted-foreground">Available Balance</span>
               <span className="neon-text-cyan font-display font-bold">
-                \u20b9{Number(userProfile.balance).toLocaleString("en-IN")}
+                ₹{Number(userProfile.balance).toLocaleString("en-IN")}
               </span>
             </div>
           )}
           <form onSubmit={handleWithdraw} className="space-y-4">
+            {/* Method selector */}
             <div>
-              <label
-                htmlFor="w-name"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
-                Full Name <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="w-name"
-                type="text"
-                required
-                className="neon-input w-full px-4 py-3"
-                placeholder="Your full name"
-                value={wName}
-                onChange={(e) => setWName(e.target.value)}
-                data-ocid="withdraw.input"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="w-account"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
-                Account / UPI ID <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="w-account"
-                type="text"
-                required
-                className="neon-input w-full px-4 py-3"
-                placeholder="phone@paytm or account number"
-                value={wAccountId}
-                onChange={(e) => setWAccountId(e.target.value)}
-                data-ocid="withdraw.input"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="w-bank"
-                  className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-                >
-                  Bank Name
-                </label>
-                <input
-                  id="w-bank"
-                  type="text"
-                  className="neon-input w-full px-4 py-3"
-                  placeholder="Bank name"
-                  value={wBankName}
-                  onChange={(e) => setWBankName(e.target.value)}
-                  data-ocid="withdraw.input"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="w-ifsc"
-                  className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-                >
-                  IFSC Code
-                </label>
-                <input
-                  id="w-ifsc"
-                  type="text"
-                  className="neon-input w-full px-4 py-3"
-                  placeholder="HDFC0001234"
-                  value={wIfsc}
-                  onChange={(e) => setWIfsc(e.target.value)}
-                  data-ocid="withdraw.input"
-                />
-              </div>
-            </div>
-            <div>
-              <label
-                htmlFor="w-amount"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
-                Amount (\u20b9) <span className="text-red-400">*</span>
-              </label>
-              <input
-                id="w-amount"
-                type="number"
-                min="1"
-                required
-                className="neon-input w-full px-4 py-3"
-                placeholder="Enter amount"
-                value={withdrawAmount}
-                onChange={(e) => setWithdrawAmount(e.target.value)}
-                data-ocid="withdraw.input"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="w-method"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
-              >
+              <label htmlFor="w-method" className={labelClass}>
                 Payment Method <span className="text-red-400">*</span>
               </label>
               <select
                 id="w-method"
                 required
-                className="neon-input w-full px-4 py-3"
-                value={withdrawMethod}
-                onChange={(e) => setWithdrawMethod(e.target.value)}
+                className={inputClass}
+                value={wFields.method}
+                onChange={(e) =>
+                  setWFields({ ...EMPTY_WITHDRAW, method: e.target.value })
+                }
                 data-ocid="withdraw.select"
               >
-                <option value="">Select payment method</option>
-                {paymentMethods.map((m) => (
+                <option value="">Select withdrawal method</option>
+                {WITHDRAW_METHODS.map((m) => (
                   <option key={m} value={m}>
                     {m}
                   </option>
                 ))}
               </select>
             </div>
+
+            {wFields.method && (
+              <>
+                {/* ID field */}
+                <div>
+                  <label htmlFor="w-id" className={labelClass}>
+                    {getIdLabel(wFields.method)}{" "}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="w-id"
+                    type="text"
+                    required
+                    className={inputClass}
+                    placeholder={getIdLabel(wFields.method)}
+                    value={wFields.id}
+                    onChange={(e) => setW("id", e.target.value)}
+                    data-ocid="withdraw.input"
+                  />
+                </div>
+
+                {/* Bank-only fields */}
+                {isBankMethod(wFields.method) && (
+                  <>
+                    <div>
+                      <label htmlFor="w-ifsc" className={labelClass}>
+                        IFSC Code <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        id="w-ifsc"
+                        type="text"
+                        required
+                        className={inputClass}
+                        placeholder="e.g. SBIN0001234"
+                        value={wFields.ifsc}
+                        onChange={(e) => setW("ifsc", e.target.value)}
+                        data-ocid="withdraw.input"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="w-branch" className={labelClass}>
+                        Branch Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        id="w-branch"
+                        type="text"
+                        required
+                        className={inputClass}
+                        placeholder="e.g. Main Branch, Delhi"
+                        value={wFields.branch}
+                        onChange={(e) => setW("branch", e.target.value)}
+                        data-ocid="withdraw.input"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Name */}
+                <div>
+                  <label htmlFor="w-name" className={labelClass}>
+                    {isBankMethod(wFields.method)
+                      ? "Account Holder Name"
+                      : "Name"}{" "}
+                    <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="w-name"
+                    type="text"
+                    required
+                    className={inputClass}
+                    placeholder="Your full name"
+                    value={wFields.name}
+                    onChange={(e) => setW("name", e.target.value)}
+                    data-ocid="withdraw.input"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div>
+                  <label htmlFor="w-amount" className={labelClass}>
+                    Amount (₹) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="w-amount"
+                    type="number"
+                    required
+                    min="1"
+                    className={inputClass}
+                    placeholder="Enter amount to withdraw"
+                    value={wFields.amount}
+                    onChange={(e) => setW("amount", e.target.value)}
+                    data-ocid="withdraw.input"
+                  />
+                </div>
+              </>
+            )}
+
             <button
               type="submit"
-              disabled={withdraw.isPending}
-              className="neon-btn w-full py-3 flex items-center justify-center gap-2"
+              disabled={withdraw.isPending || !wFields.method}
+              className="w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
               style={{
-                borderColor: "rgba(201,60,255,0.5)",
-                boxShadow: "0 0 20px rgba(201,60,255,0.2)",
+                background: "rgba(201, 60, 255, 0.12)",
+                border: "1px solid rgba(201, 60, 255, 0.5)",
+                boxShadow: "0 0 20px rgba(201, 60, 255, 0.2)",
+                color: "oklch(0.8 0.2 310)",
               }}
               data-ocid="withdraw.submit_button"
             >
@@ -726,7 +934,9 @@ export default function Dashboard() {
                   <Loader2 className="w-4 h-4 animate-spin" /> Processing...
                 </>
               ) : (
-                "Submit Withdrawal"
+                <>
+                  <ArrowUpRight className="w-4 h-4" /> Submit Withdrawal
+                </>
               )}
             </button>
           </form>
@@ -793,7 +1003,7 @@ export default function Dashboard() {
                       <TypeBadge txType={String(tx.txType)} />
                     </td>
                     <td className="py-3 px-3 font-display font-bold neon-text-cyan">
-                      \u20b9{Number(tx.amount).toLocaleString("en-IN")}
+                      ₹{Number(tx.amount).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-3 text-muted-foreground">
                       {tx.paymentMethod}

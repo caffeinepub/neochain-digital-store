@@ -1,16 +1,13 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Loader2, LogIn, LogOut, Wallet } from "lucide-react";
 import { useState } from "react";
-import type { UserProfile } from "../backend.d";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { useUserProfile } from "../hooks/useQueries";
 import WalletModal from "./WalletModal";
 
-interface NavbarProps {
-  userProfile: UserProfile | null;
-}
-
-export default function Navbar({ userProfile }: NavbarProps) {
+export default function Navbar() {
   const { identity, login, clear, isLoggingIn } = useInternetIdentity();
+  const { data: userProfile } = useUserProfile();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
@@ -26,16 +23,18 @@ export default function Navbar({ userProfile }: NavbarProps) {
   };
 
   const balance = userProfile?.balance ?? 0n;
+  const isLoggedIn = !!identity;
+  const hasProfile = !!userProfile;
 
   return (
     <>
       <header
         className="sticky top-0 z-50 w-full"
         style={{
-          background: "rgba(7, 8, 26, 0.85)",
+          background: "rgba(7, 8, 26, 0.92)",
           backdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(123, 77, 255, 0.2)",
-          boxShadow: "0 4px 30px rgba(0, 0, 0, 0.4)",
+          borderBottom: "1px solid rgba(123, 77, 255, 0.25)",
+          boxShadow: "0 4px 30px rgba(0, 0, 0, 0.5)",
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -81,23 +80,25 @@ export default function Navbar({ userProfile }: NavbarProps) {
 
             {/* Right Side */}
             <div className="flex items-center gap-2">
-              {identity && userProfile && (
+              {isLoggedIn && hasProfile && (
                 <>
                   {/* Balance Badge */}
-                  <div
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-display font-bold"
+                  <button
+                    type="button"
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-display font-bold cursor-pointer"
                     style={{
-                      background: "rgba(38, 214, 255, 0.08)",
-                      border: "1px solid rgba(38, 214, 255, 0.25)",
-                      boxShadow: "0 0 10px rgba(38, 214, 255, 0.1)",
+                      background: "rgba(38, 214, 255, 0.1)",
+                      border: "1px solid rgba(38, 214, 255, 0.3)",
+                      boxShadow: "0 0 12px rgba(38, 214, 255, 0.15)",
                     }}
+                    onClick={() => setWalletOpen(true)}
                     data-ocid="nav.panel"
                   >
                     <span className="text-muted-foreground text-xs">₹</span>
                     <span className="neon-text-cyan">
                       {Number(balance).toLocaleString("en-IN")}
                     </span>
-                  </div>
+                  </button>
 
                   {/* Wallet Button */}
                   <button
@@ -111,20 +112,22 @@ export default function Navbar({ userProfile }: NavbarProps) {
                     data-ocid="wallet.open_modal_button"
                   >
                     <Wallet className="w-4 h-4 neon-text-cyan" />
-                    <span className="hidden md:inline text-xs">Wallet</span>
+                    <span className="hidden md:inline text-xs font-semibold">
+                      Wallet
+                    </span>
                   </button>
                 </>
               )}
 
-              {identity && userProfile && (
+              {isLoggedIn && hasProfile && (
                 <div className="hidden md:flex items-center text-sm text-muted-foreground">
                   <span className="neon-text-cyan font-display font-semibold text-xs">
-                    {userProfile.username}
+                    {userProfile?.username}
                   </span>
                 </div>
               )}
 
-              {identity ? (
+              {isLoggedIn ? (
                 <button
                   type="button"
                   onClick={clear}
@@ -187,9 +190,8 @@ export default function Navbar({ userProfile }: NavbarProps) {
                   {link.label}
                 </Link>
               ))}
-              {identity && userProfile && (
+              {isLoggedIn && hasProfile && (
                 <>
-                  {/* Mobile Balance */}
                   <div
                     className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
                     style={{
@@ -228,7 +230,7 @@ export default function Navbar({ userProfile }: NavbarProps) {
       <WalletModal
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
-        userProfile={userProfile}
+        userProfile={userProfile ?? null}
       />
     </>
   );

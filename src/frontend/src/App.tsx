@@ -26,7 +26,7 @@ function RootLayout() {
   const location = useLocation();
   const isAdmin = location.pathname === "/admin";
 
-  const [userProfile, setUserProfile] = useState<
+  const [_userProfile, setUserProfile] = useState<
     UserProfile | null | undefined
   >(undefined);
   const [showRegister, setShowRegister] = useState(false);
@@ -54,7 +54,6 @@ function RootLayout() {
     setShowRegister(false);
   };
 
-  // Admin path: render full-screen without Navbar/Footer
   if (isAdmin) {
     return (
       <div className="min-h-screen cyber-grid-bg">
@@ -75,7 +74,7 @@ function RootLayout() {
 
   return (
     <div className="min-h-screen flex flex-col cyber-grid-bg">
-      <Navbar userProfile={userProfile ?? null} />
+      <Navbar />
       <main className="flex-1">
         <Outlet />
       </main>
