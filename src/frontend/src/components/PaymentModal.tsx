@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { ProductPlan } from "../backend.d";
 import { useDeposit, usePaymentMethods } from "../hooks/useQueries";
@@ -51,7 +51,6 @@ export default function PaymentModal({ product, onClose }: Props) {
   const [txnId, setTxnId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [success, setSuccess] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // Build merged list
   const methods: MethodInfo[] = STANDARD_METHODS.map((stdName) => {
@@ -367,6 +366,7 @@ export default function PaymentModal({ product, onClose }: Props) {
                     />
                   </div>
 
+                  {/* Screenshot upload — label-wrapping pattern for reliable click */}
                   <div>
                     <label
                       htmlFor="pay-screenshot"
@@ -374,14 +374,17 @@ export default function PaymentModal({ product, onClose }: Props) {
                     >
                       Payment Screenshot *
                     </label>
-                    <button
-                      type="button"
-                      className="w-full rounded-xl p-4 text-center cursor-pointer transition-colors"
+                    <label
+                      htmlFor="pay-screenshot"
+                      className="w-full rounded-xl p-4 text-center cursor-pointer transition-colors block"
                       style={{
                         background: "rgba(255,255,255,0.03)",
-                        border: `1px dashed ${screenshot ? "rgba(52,211,153,0.5)" : "rgba(123,77,255,0.3)"}`,
+                        border: `1px dashed ${
+                          screenshot
+                            ? "rgba(52,211,153,0.5)"
+                            : "rgba(123,77,255,0.3)"
+                        }`,
                       }}
-                      onClick={() => fileRef.current?.click()}
                       data-ocid="payment.upload_button"
                     >
                       {screenshot ? (
@@ -399,18 +402,17 @@ export default function PaymentModal({ product, onClose }: Props) {
                           </p>
                         </div>
                       )}
-                    </button>
-                    <input
-                      ref={fileRef}
-                      id="pay-screenshot"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        setScreenshot(e.target.files?.[0] ?? null)
-                      }
-                      data-ocid="payment.dropzone"
-                    />
+                      <input
+                        id="pay-screenshot"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          setScreenshot(e.target.files?.[0] ?? null)
+                        }
+                        data-ocid="payment.dropzone"
+                      />
+                    </label>
                   </div>
 
                   <button

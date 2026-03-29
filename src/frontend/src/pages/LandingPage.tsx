@@ -9,7 +9,7 @@ const PRODUCTS = [
     name: "Starter Pack",
     price: 1500n,
     description:
-      "Begin your digital earning journey. One-time purchase, beginner-friendly with instant activation.",
+      "Start your earning journey with a simple, beginner-friendly digital product. One-time purchase with fast approval.",
     color: "cyan",
   },
   {
@@ -17,7 +17,7 @@ const PRODUCTS = [
     name: "Growth Pack",
     price: 3000n,
     description:
-      "Accelerate your earnings with higher referral returns. Simple, secure, fast approval.",
+      "Accelerate your income with higher referral returns. Secure system, instant activation after approval.",
     color: "violet",
   },
   {
@@ -25,7 +25,7 @@ const PRODUCTS = [
     name: "Pro Pack",
     price: 5000n,
     description:
-      "Maximize your earning potential. Trusted system with premium referral benefits.",
+      "Maximize your earning potential with premium referral benefits. Trusted by thousands of active earners.",
     color: "magenta",
   },
   {
@@ -33,7 +33,7 @@ const PRODUCTS = [
     name: "Elite Pack",
     price: 8000n,
     description:
-      "Top-tier earning system for serious earners. Maximum 20% commissions on every referral.",
+      "Top-tier plan for serious earners. Maximum commissions, priority approval, long-term earning potential.",
     color: "cyan",
   },
 ];
@@ -72,7 +72,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
+      {/* ===== HERO ===== */}
       <section className="relative flex flex-col items-center justify-center text-center px-4 py-24 sm:py-36 overflow-hidden">
         {/* Background glow blobs */}
         <div
@@ -90,6 +90,7 @@ export default function LandingPage() {
           transition={{ duration: 0.7 }}
           className="relative z-10 max-w-3xl mx-auto"
         >
+          {/* Animated badge */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -102,18 +103,18 @@ export default function LandingPage() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            20% Commission on Every Referral
+            Referral System Active — Earn 20% Per Sale
           </motion.div>
 
           <h1 className="font-display font-black text-5xl sm:text-7xl leading-tight mb-6">
-            <span className="gradient-text">Start Your</span>
+            <span className="gradient-text">Earn 20% On</span>
             <br />
-            <span className="text-foreground">Earning Journey</span>
+            <span className="text-foreground">Every Referral</span>
           </h1>
 
           <p className="text-muted-foreground text-lg sm:text-xl max-w-xl mx-auto mb-10 leading-relaxed">
-            Premium digital products with a powerful referral system. One-time
-            purchase, beginner-friendly, instant activation.
+            Buy once. Refer friends. Earn real money — 20% commission for every
+            friend who joins and purchases a plan.
           </p>
 
           <a
@@ -121,22 +122,7 @@ export default function LandingPage() {
             className="neon-btn-primary inline-flex items-center gap-2 px-8 py-4 text-base font-semibold"
             data-ocid="hero.primary_button"
           >
-            Get Started
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 16 16"
-              fill="none"
-              role="img"
-              aria-label="Arrow right"
-            >
-              <path
-                d="M8 3l5 5-5 5M3 8h10"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            View Plans
           </a>
         </motion.div>
 
@@ -165,7 +151,7 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
-      {/* Products Section */}
+      {/* ===== PRODUCTS ===== */}
       <section id="products" className="px-4 pb-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -178,8 +164,8 @@ export default function LandingPage() {
             <span className="gradient-text">Choose Your Plan</span>
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Select the plan that fits your goals. All plans include referral
-            activation after approval.
+            One-time purchase. Activate your referral link after approval and
+            start earning 20% commission instantly.
           </p>
         </motion.div>
 
@@ -193,7 +179,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 whileHover={{ y: -8 }}
-                className="relative w-72 max-w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300 cursor-pointer"
+                className="relative w-72 max-w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
                 style={{
                   background:
                     "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
@@ -238,12 +224,27 @@ export default function LandingPage() {
                 </div>
 
                 {/* Description */}
-                <p className="text-muted-foreground text-sm leading-relaxed flex-1 mb-6">
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                   {product.description}
                 </p>
 
+                {/* Referral commission callout */}
+                <div
+                  className="rounded-xl px-3 py-2.5 mb-5 text-xs leading-relaxed"
+                  style={{
+                    background: "rgba(52,211,153,0.06)",
+                    border: "1px solid rgba(52,211,153,0.25)",
+                    boxShadow: "0 0 12px rgba(52,211,153,0.08)",
+                    color: "rgba(52,211,153,0.9)",
+                  }}
+                >
+                  🤝 Buy this product and share with your friends. When your
+                  friend signs up and purchases any product, you will earn{" "}
+                  <strong>20% commission</strong>.
+                </div>
+
                 {/* Features */}
-                <ul className="space-y-1.5 mb-6">
+                <ul className="space-y-1.5 mb-6 flex-1">
                   {[
                     "One-time purchase",
                     "Beginner-friendly",
@@ -275,7 +276,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* ===== HOW IT WORKS ===== */}
       <section className="px-4 pb-24">
         <div className="max-w-4xl mx-auto">
           <motion.h2

@@ -1,31 +1,37 @@
 # NeoChain Digital Store
 
 ## Current State
-The app has a LandingPage with product plans (default prices not matching), Dashboard, AdminPanel, AdminLoginPage. Backend supports: products, transactions (deposit/purchase/withdrawal), user profiles with referral codes, payment methods. Backend does NOT have QR code storage per payment method.
+- WalletModal has deposit and withdrawal tabs but withdrawal uses generic fields (Name, Account/UPI ID, Bank, IFSC) without payment-method-specific differentiation
+- PaymentModal screenshot upload uses button+ref pattern which may fail in some environments
+- LandingPage product cards have short descriptions but no referral commission description
+- Hero section is functional but can be cleaner/more premium
+- Navbar shows balance and wallet button only when identity && userProfile (correct behavior)
 
 ## Requested Changes (Diff)
 
 ### Add
-- Premium product cards section: 4 products at ₹1500/₹3000/₹5000/₹8000 with 10% cashback badge
-- Buy Now → payment selection popup showing all 7 payment methods with QR codes
-- Payment form after method selection: name, txn ID, amount (auto-filled), screenshot upload
-- Admin QR management: upload/change QR images and enable/disable per payment method (store as base64 in description or localStorage for now since no new backend endpoints)
-- Referral link UI shown only after admin approves payment
-- 20% commission display in dashboard
+- Withdrawal tab: dynamic fields based on selected payment method:
+  - eSewa: eSewa ID, Name, Amount
+  - Khalti: Khalti ID, Name, Amount
+  - Paytm: Paytm Number or UPI ID, Name, Amount
+  - PhonePe: PhonePe Number or UPI ID, Name, Amount
+  - Google Pay: Google Pay Number or UPI ID, Name, Amount
+  - SBI Bank: Account Number, IFSC Code, Account Holder Name, Branch Name, Amount
+  - HDFC Bank: Account Number, IFSC Code, Account Holder Name, Branch Name, Amount
+- Product cards: add referral commission description below each plan: "Buy this product and share with your friends. When your friend signs up and purchases any product, you will earn 20% commission."
+- Hero section: cleaner, more premium look with reduced clutter
 
 ### Modify
-- LandingPage: Replace current hero/plans with exact premium dark purple-blue gradient design per specs
-- Product cards: Small centered, not full width, rounded 12-16px, hover lift+glow animation, 10% cashback badge glowing
-- AdminPanel: Add Payment Management section with QR upload and enable/disable toggles
-- Dashboard: Show referral link only when user has approved purchase; show commission balance
+- WalletModal withdrawal form: replace generic fields with method-specific fields rendered after method selection
+- PaymentModal screenshot upload: change from button+ref click to proper label-wrapping approach for reliable file selection
+- LandingPage: remove any unnecessary sections, keep only hero + products + how it works
+- Withdrawal methods limited to: eSewa, Khalti, Paytm, PhonePe, Google Pay, SBI Bank, HDFC Bank (not USD Payment / Bybit Pay)
 
 ### Remove
-- Generic pricing/feature lists from product cards (replace with benefit-focused short descriptions)
+- Any extra/clutter sections from LandingPage
+- Unnecessary footer links
 
 ## Implementation Plan
-1. Redesign LandingPage with premium dark cards (₹1500/₹3000/₹5000/₹8000), cashback badges, dark gradient bg
-2. Build PaymentModal component: step 1 = method selection with QR codes, step 2 = payment form
-3. Use payment method `description` field to store QR as base64 and enabled/disabled status (JSON)
-4. Update AdminPanel Payment Management section: QR image upload + toggle
-5. Update Dashboard to show referral link conditionally (only if user has approved purchase transaction)
-6. Wire all flows together in App/routing
+1. Update WalletModal.tsx: method-specific withdrawal fields with conditional rendering
+2. Update PaymentModal.tsx: fix screenshot upload with label-wrapping
+3. Update LandingPage.tsx: add referral description to product cards, improve hero, remove clutter

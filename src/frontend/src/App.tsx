@@ -23,6 +23,9 @@ import LandingPage from "./pages/LandingPage";
 function RootLayout() {
   const { identity, loginStatus } = useInternetIdentity();
   const { actor, isFetching } = useActor();
+  const location = useLocation();
+  const isAdmin = location.pathname === "/admin";
+
   const [userProfile, setUserProfile] = useState<
     UserProfile | null | undefined
   >(undefined);
@@ -50,6 +53,25 @@ function RootLayout() {
     setUserProfile(profile);
     setShowRegister(false);
   };
+
+  // Admin path: render full-screen without Navbar/Footer
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen cyber-grid-bg">
+        <Outlet />
+        <Toaster
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: "rgba(10, 8, 30, 0.95)",
+              border: "1px solid rgba(123, 77, 255, 0.4)",
+              color: "oklch(0.96 0.01 280)",
+            },
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col cyber-grid-bg">

@@ -52,15 +52,16 @@ function StatusBadge({ status }: { status: string }) {
 
 function TypeBadge({ txType }: { txType: string }) {
   const icons: Record<string, string> = {
-    deposit: "↑",
-    withdrawal: "↓",
-    referral_bonus: "★",
-    purchase: "◈",
+    deposit: "\u2191",
+    withdrawal: "\u2193",
+    referral_bonus: "\u2605",
+    purchase: "\u25c8",
   };
   const label = txType.replace("_", " ");
   return (
     <span className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground">
-      <span className="neon-text-cyan">{icons[txType] ?? "•"}</span> {label}
+      <span className="neon-text-cyan">{icons[txType] ?? "\u2022"}</span>{" "}
+      {label}
     </span>
   );
 }
@@ -76,10 +77,18 @@ export default function Dashboard() {
   const deposit = useDeposit();
   const withdraw = useWithdraw();
 
+  const [dName, setDName] = useState("");
+  const [dTxId, setDTxId] = useState("");
   const [depositAmount, setDepositAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState("");
+
+  const [wName, setWName] = useState("");
+  const [wAccountId, setWAccountId] = useState("");
+  const [wBankName, setWBankName] = useState("");
+  const [wIfsc, setWIfsc] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawMethod, setWithdrawMethod] = useState("");
+
   const [copied, setCopied] = useState(false);
 
   const paymentMethods =
@@ -87,7 +96,6 @@ export default function Dashboard() {
       ? paymentMethodsData.map((m) => m.name)
       : PAYMENT_METHODS_DEFAULT;
 
-  // Referral activation logic: check if any approved purchase/deposit transaction
   const myTxs: Transaction[] = transactions ?? [];
   const hasApprovedPurchase = myTxs.some(
     (tx) =>
@@ -110,8 +118,8 @@ export default function Dashboard() {
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!depositAmount || !depositMethod) {
-      toast.error("Please fill all fields");
+    if (!dTxId || !depositAmount || !depositMethod) {
+      toast.error("Transaction ID, Amount, and Payment Method are required");
       return;
     }
     const amount = BigInt(Math.floor(Number.parseFloat(depositAmount)));
@@ -122,6 +130,8 @@ export default function Dashboard() {
     try {
       await deposit.mutateAsync({ amount, paymentMethod: depositMethod });
       toast.success("Deposit request submitted!");
+      setDName("");
+      setDTxId("");
       setDepositAmount("");
       setDepositMethod("");
       refetchProfile();
@@ -132,8 +142,8 @@ export default function Dashboard() {
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!withdrawAmount || !withdrawMethod) {
-      toast.error("Please fill all fields");
+    if (!wName || !wAccountId || !withdrawAmount || !withdrawMethod) {
+      toast.error("Name, Account ID, Amount, and Payment Method are required");
       return;
     }
     const amount = BigInt(Math.floor(Number.parseFloat(withdrawAmount)));
@@ -141,9 +151,20 @@ export default function Dashboard() {
       toast.error("Invalid amount");
       return;
     }
+    const balance = userProfile?.balance ?? 0n;
+    if (amount > balance) {
+      toast.error(
+        `Insufficient balance. Available: \u20b9${Number(balance).toLocaleString("en-IN")}`,
+      );
+      return;
+    }
     try {
       await withdraw.mutateAsync({ amount, paymentMethod: withdrawMethod });
       toast.success("Withdrawal request submitted!");
+      setWName("");
+      setWAccountId("");
+      setWBankName("");
+      setWIfsc("");
       setWithdrawAmount("");
       setWithdrawMethod("");
       refetchProfile();
@@ -172,7 +193,7 @@ export default function Dashboard() {
         )}
       </motion.div>
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -199,7 +220,7 @@ export default function Dashboard() {
             />
           ) : (
             <div className="font-display font-black text-3xl neon-text-cyan">
-              ₹{Number(userProfile?.balance ?? 0n).toLocaleString("en-IN")}
+              \u20b9{Number(userProfile?.balance ?? 0n).toLocaleString("en-IN")}
             </div>
           )}
           <div className="text-muted-foreground text-xs mt-1">
@@ -231,7 +252,7 @@ export default function Dashboard() {
             />
           ) : (
             <div className="font-display font-black text-3xl neon-text-magenta">
-              ₹
+              \u20b9
               {Number(userProfile?.referralEarnings ?? 0n).toLocaleString(
                 "en-IN",
               )}
@@ -299,7 +320,7 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Referral Section */}
+      {/* Referral */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -332,7 +353,6 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
-
         {referralActive && referralLink ? (
           <div>
             <p className="text-muted-foreground text-sm mb-3">
@@ -351,7 +371,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={handleCopyReferral}
-                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
                 style={{
                   background: "rgba(38,214,255,0.1)",
                   border: "1px solid rgba(38,214,255,0.3)",
@@ -369,7 +389,7 @@ export default function Dashboard() {
                 href={referralLink}
                 target="_blank"
                 rel="noreferrer"
-                className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
                 data-ocid="referral.link"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -429,6 +449,7 @@ export default function Dashboard() {
 
       {/* Deposit & Withdraw */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        {/* DEPOSIT */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -450,16 +471,51 @@ export default function Dashboard() {
           <form onSubmit={handleDeposit} className="space-y-4">
             <div>
               <label
-                htmlFor="deposit-amount"
+                htmlFor="d-name"
                 className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
               >
-                Amount (₹)
+                Full Name
               </label>
               <input
-                id="deposit-amount"
+                id="d-name"
+                type="text"
+                className="neon-input w-full px-4 py-3"
+                placeholder="Your full name"
+                value={dName}
+                onChange={(e) => setDName(e.target.value)}
+                data-ocid="deposit.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="d-txid"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Transaction ID <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="d-txid"
+                type="text"
+                required
+                className="neon-input w-full px-4 py-3"
+                placeholder="e.g. TXN123456789"
+                value={dTxId}
+                onChange={(e) => setDTxId(e.target.value)}
+                data-ocid="deposit.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="d-amount"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Amount (\u20b9) <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="d-amount"
                 type="number"
                 min="1"
-                step="1"
+                required
                 className="neon-input w-full px-4 py-3"
                 placeholder="Enter amount"
                 value={depositAmount}
@@ -469,13 +525,14 @@ export default function Dashboard() {
             </div>
             <div>
               <label
-                htmlFor="deposit-method"
+                htmlFor="d-method"
                 className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
               >
-                Payment Method
+                Payment Method <span className="text-red-400">*</span>
               </label>
               <select
-                id="deposit-method"
+                id="d-method"
+                required
                 className="neon-input w-full px-4 py-3"
                 value={depositMethod}
                 onChange={(e) => setDepositMethod(e.target.value)}
@@ -506,6 +563,7 @@ export default function Dashboard() {
           </form>
         </motion.div>
 
+        {/* WITHDRAW */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -524,19 +582,105 @@ export default function Dashboard() {
             </div>
             <h2 className="font-display font-bold text-xl">Withdraw Funds</h2>
           </div>
+          {userProfile && (
+            <div
+              className="flex items-center justify-between p-3 rounded-xl text-sm mb-4"
+              style={{
+                background: "rgba(38,214,255,0.05)",
+                border: "1px solid rgba(38,214,255,0.15)",
+              }}
+            >
+              <span className="text-muted-foreground">Available Balance</span>
+              <span className="neon-text-cyan font-display font-bold">
+                \u20b9{Number(userProfile.balance).toLocaleString("en-IN")}
+              </span>
+            </div>
+          )}
           <form onSubmit={handleWithdraw} className="space-y-4">
             <div>
               <label
-                htmlFor="withdraw-amount"
+                htmlFor="w-name"
                 className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
               >
-                Amount (₹)
+                Full Name <span className="text-red-400">*</span>
               </label>
               <input
-                id="withdraw-amount"
+                id="w-name"
+                type="text"
+                required
+                className="neon-input w-full px-4 py-3"
+                placeholder="Your full name"
+                value={wName}
+                onChange={(e) => setWName(e.target.value)}
+                data-ocid="withdraw.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="w-account"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Account / UPI ID <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="w-account"
+                type="text"
+                required
+                className="neon-input w-full px-4 py-3"
+                placeholder="phone@paytm or account number"
+                value={wAccountId}
+                onChange={(e) => setWAccountId(e.target.value)}
+                data-ocid="withdraw.input"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label
+                  htmlFor="w-bank"
+                  className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                >
+                  Bank Name
+                </label>
+                <input
+                  id="w-bank"
+                  type="text"
+                  className="neon-input w-full px-4 py-3"
+                  placeholder="Bank name"
+                  value={wBankName}
+                  onChange={(e) => setWBankName(e.target.value)}
+                  data-ocid="withdraw.input"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="w-ifsc"
+                  className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                >
+                  IFSC Code
+                </label>
+                <input
+                  id="w-ifsc"
+                  type="text"
+                  className="neon-input w-full px-4 py-3"
+                  placeholder="HDFC0001234"
+                  value={wIfsc}
+                  onChange={(e) => setWIfsc(e.target.value)}
+                  data-ocid="withdraw.input"
+                />
+              </div>
+            </div>
+            <div>
+              <label
+                htmlFor="w-amount"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Amount (\u20b9) <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="w-amount"
                 type="number"
                 min="1"
-                step="1"
+                required
                 className="neon-input w-full px-4 py-3"
                 placeholder="Enter amount"
                 value={withdrawAmount}
@@ -546,13 +690,14 @@ export default function Dashboard() {
             </div>
             <div>
               <label
-                htmlFor="withdraw-method"
+                htmlFor="w-method"
                 className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
               >
-                Payment Method
+                Payment Method <span className="text-red-400">*</span>
               </label>
               <select
-                id="withdraw-method"
+                id="w-method"
+                required
                 className="neon-input w-full px-4 py-3"
                 value={withdrawMethod}
                 onChange={(e) => setWithdrawMethod(e.target.value)}
@@ -648,7 +793,7 @@ export default function Dashboard() {
                       <TypeBadge txType={String(tx.txType)} />
                     </td>
                     <td className="py-3 px-3 font-display font-bold neon-text-cyan">
-                      ₹{Number(tx.amount).toLocaleString("en-IN")}
+                      \u20b9{Number(tx.amount).toLocaleString("en-IN")}
                     </td>
                     <td className="py-3 px-3 text-muted-foreground">
                       {tx.paymentMethod}
