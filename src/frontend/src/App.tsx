@@ -1,0 +1,134 @@
+import { Toaster } from "@/components/ui/sonner";
+import {
+  Outlet,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import type { UserProfile } from "./backend.d";
+import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
+import RegisterModal from "./components/RegisterModal";
+import { useActor } from "./hooks/useActor";
+import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import AdminLoginPage from "./pages/AdminLoginPage";
+import AdminPanel from "./pages/AdminPanel";
+import Dashboard from "./pages/Dashboard";
+import LandingPage from "./pages/LandingPage";
+
+function RootLayout() {
+  const { identity, loginStatus } = useInternetIdentity();
+  const { actor, isFetching } = useActor();
+  const [userProfile, setUserProfile] = useState<
+    UserProfile | null | undefined
+  >(undefined);
+  const [showRegister, setShowRegister] = useState(false);
+
+  useEffect(() => {
+    if (!identity || !actor || isFetching) return;
+    actor
+      .getCallerUserProfile()
+      .then((profile) => {
+        setUserProfile(profile);
+        if (profile === null) setShowRegister(true);
+      })
+      .catch(() => setUserProfile(null));
+  }, [identity, actor, isFetching]);
+
+  useEffect(() => {
+    if (loginStatus === "idle") {
+      setUserProfile(undefined);
+      setShowRegister(false);
+    }
+  }, [loginStatus]);
+
+  const handleRegistered = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setShowRegister(false);
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col cyber-grid-bg">
+      <Navbar userProfile={userProfile ?? null} />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+      <Toaster
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: "rgba(10, 8, 30, 0.95)",
+            border: "1px solid rgba(123, 77, 255, 0.4)",
+            color: "oklch(0.96 0.01 280)",
+          },
+        }}
+      />
+      {showRegister && identity && actor && (
+        <RegisterModal
+          actor={actor}
+          onRegistered={handleRegistered}
+          onClose={() => setShowRegister(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProtectedDashboard() {
+  const { identity, isInitializing } = useInternetIdentity();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isInitializing && !identity) navigate({ to: "/" });
+  }, [identity, isInitializing, navigate]);
+  if (isInitializing || !identity) return null;
+  return <Dashboard />;
+}
+
+function ProtectedAdmin() {
+  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  if (!adminAuthenticated) {
+    return <AdminLoginPage onLogin={() => setAdminAuthenticated(true)} />;
+  }
+  return <AdminPanel />;
+}
+
+const rootRoute = createRootRoute({ component: RootLayout });
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/",
+  component: LandingPage,
+});
+const dashboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dashboard",
+  component: ProtectedDashboard,
+});
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin",
+  component: ProtectedAdmin,
+});
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  dashboardRoute,
+  adminRoute,
+]);
+const router = createRouter({ routeTree });
+
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
+
+export default function App() {
+  return <RouterProvider router={router} />;
+}
+
+export { useNavigate, useLocation };

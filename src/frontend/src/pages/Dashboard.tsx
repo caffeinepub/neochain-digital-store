@@ -1,0 +1,673 @@
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  Copy,
+  DollarSign,
+  ExternalLink,
+  Loader2,
+  Lock,
+  RefreshCw,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import type { Transaction } from "../backend.d";
+import { TransactionStatus, TransactionType } from "../backend.d";
+import {
+  useAllTransactions,
+  useDeposit,
+  usePaymentMethods,
+  useUserProfile,
+  useWithdraw,
+} from "../hooks/useQueries";
+
+const PAYMENT_METHODS_DEFAULT = [
+  "eSewa",
+  "Khalti",
+  "Paytm",
+  "PhonePe",
+  "Google Pay",
+  "USD Payment",
+  "Bybit Pay",
+];
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+    approved: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
+    completed: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
+    rejected: "text-red-400 bg-red-400/10 border-red-400/30",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${styles[status] ?? "text-muted-foreground"}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function TypeBadge({ txType }: { txType: string }) {
+  const icons: Record<string, string> = {
+    deposit: "↑",
+    withdrawal: "↓",
+    referral_bonus: "★",
+    purchase: "◈",
+  };
+  const label = txType.replace("_", " ");
+  return (
+    <span className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground">
+      <span className="neon-text-cyan">{icons[txType] ?? "•"}</span> {label}
+    </span>
+  );
+}
+
+export default function Dashboard() {
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    refetch: refetchProfile,
+  } = useUserProfile();
+  const { data: transactions, isLoading: txLoading } = useAllTransactions();
+  const { data: paymentMethodsData } = usePaymentMethods();
+  const deposit = useDeposit();
+  const withdraw = useWithdraw();
+
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositMethod, setDepositMethod] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const paymentMethods =
+    paymentMethodsData && paymentMethodsData.length > 0
+      ? paymentMethodsData.map((m) => m.name)
+      : PAYMENT_METHODS_DEFAULT;
+
+  // Referral activation logic: check if any approved purchase/deposit transaction
+  const myTxs: Transaction[] = transactions ?? [];
+  const hasApprovedPurchase = myTxs.some(
+    (tx) =>
+      String(tx.status) === TransactionStatus.approved &&
+      (String(tx.txType) === TransactionType.purchase ||
+        String(tx.txType) === TransactionType.deposit),
+  );
+  const referralActive = !!userProfile?.referralCode && hasApprovedPurchase;
+  const referralLink = referralActive
+    ? `${window.location.origin}/?ref=${userProfile?.referralCode}`
+    : null;
+
+  const handleCopyReferral = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Referral link copied!");
+  };
+
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!depositAmount || !depositMethod) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    const amount = BigInt(Math.floor(Number.parseFloat(depositAmount)));
+    if (amount <= 0n) {
+      toast.error("Invalid amount");
+      return;
+    }
+    try {
+      await deposit.mutateAsync({ amount, paymentMethod: depositMethod });
+      toast.success("Deposit request submitted!");
+      setDepositAmount("");
+      setDepositMethod("");
+      refetchProfile();
+    } catch {
+      toast.error("Deposit failed. Please try again.");
+    }
+  };
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!withdrawAmount || !withdrawMethod) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    const amount = BigInt(Math.floor(Number.parseFloat(withdrawAmount)));
+    if (amount <= 0n) {
+      toast.error("Invalid amount");
+      return;
+    }
+    try {
+      await withdraw.mutateAsync({ amount, paymentMethod: withdrawMethod });
+      toast.success("Withdrawal request submitted!");
+      setWithdrawAmount("");
+      setWithdrawMethod("");
+      refetchProfile();
+    } catch {
+      toast.error("Withdrawal failed. Please try again.");
+    }
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10"
+      >
+        <h1 className="font-display font-black text-4xl sm:text-5xl gradient-text">
+          Dashboard
+        </h1>
+        {userProfile && (
+          <p className="text-muted-foreground mt-2">
+            Welcome back,{" "}
+            <span className="neon-text-cyan font-semibold">
+              {userProfile.username}
+            </span>
+          </p>
+        )}
+      </motion.div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="stat-card"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">
+              Balance
+            </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(38,214,255,0.1)" }}
+            >
+              <Wallet className="w-4 h-4 neon-text-cyan" />
+            </div>
+          </div>
+          {profileLoading ? (
+            <div
+              className="h-8 w-24 animate-pulse rounded"
+              style={{ background: "rgba(123,77,255,0.15)" }}
+              data-ocid="dashboard.loading_state"
+            />
+          ) : (
+            <div className="font-display font-black text-3xl neon-text-cyan">
+              ₹{Number(userProfile?.balance ?? 0n).toLocaleString("en-IN")}
+            </div>
+          )}
+          <div className="text-muted-foreground text-xs mt-1">
+            Available balance
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="stat-card"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">
+              Referral Earnings
+            </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(201,60,255,0.1)" }}
+            >
+              <DollarSign className="w-4 h-4 neon-text-magenta" />
+            </div>
+          </div>
+          {profileLoading ? (
+            <div
+              className="h-8 w-24 animate-pulse rounded"
+              style={{ background: "rgba(123,77,255,0.15)" }}
+            />
+          ) : (
+            <div className="font-display font-black text-3xl neon-text-magenta">
+              ₹
+              {Number(userProfile?.referralEarnings ?? 0n).toLocaleString(
+                "en-IN",
+              )}
+            </div>
+          )}
+          <div className="text-muted-foreground text-xs mt-1">
+            From referrals (20%)
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="stat-card"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">
+              Total Transactions
+            </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{ background: "rgba(38,214,255,0.1)" }}
+            >
+              <RefreshCw className="w-4 h-4 neon-text-cyan" />
+            </div>
+          </div>
+          <div className="font-display font-black text-3xl neon-text-cyan">
+            {myTxs.length}
+          </div>
+          <div className="text-muted-foreground text-xs mt-1">All time</div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="stat-card"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">
+              Referral Status
+            </span>
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: referralActive
+                  ? "rgba(52,211,153,0.1)"
+                  : "rgba(123,77,255,0.1)",
+              }}
+            >
+              <TrendingUp
+                className={`w-4 h-4 ${referralActive ? "text-emerald-400" : "neon-text-violet"}`}
+              />
+            </div>
+          </div>
+          <div
+            className={`font-display font-bold text-lg ${referralActive ? "text-emerald-400" : "text-muted-foreground"}`}
+          >
+            {referralActive ? "Active" : "Locked"}
+          </div>
+          <div className="text-muted-foreground text-xs mt-1">
+            {referralActive ? "You can invite friends" : "Buy to unlock"}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Referral Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="neon-card p-6 mb-8"
+        data-ocid="referral.section"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{
+              background: referralActive
+                ? "rgba(52,211,153,0.1)"
+                : "rgba(123,77,255,0.1)",
+              border: `1px solid ${referralActive ? "rgba(52,211,153,0.2)" : "rgba(123,77,255,0.2)"}`,
+            }}
+          >
+            {referralActive ? (
+              <TrendingUp className="w-5 h-5 text-emerald-400" />
+            ) : (
+              <Lock className="w-5 h-5 neon-text-violet" />
+            )}
+          </div>
+          <div>
+            <h2 className="font-display font-bold text-xl">Referral System</h2>
+            <p className="text-muted-foreground text-sm">
+              {referralActive
+                ? "Earn 20% on every successful referral"
+                : "Complete a purchase to unlock"}
+            </p>
+          </div>
+        </div>
+
+        {referralActive && referralLink ? (
+          <div>
+            <p className="text-muted-foreground text-sm mb-3">
+              Your referral link:
+            </p>
+            <div
+              className="flex items-center gap-3 p-3 rounded-xl"
+              style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(123,77,255,0.2)",
+              }}
+            >
+              <span className="flex-1 font-mono text-sm neon-text-cyan truncate">
+                {referralLink}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyReferral}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                style={{
+                  background: "rgba(38,214,255,0.1)",
+                  border: "1px solid rgba(38,214,255,0.3)",
+                }}
+                data-ocid="referral.button"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+                {copied ? "Copied!" : "Copy"}
+              </button>
+              <a
+                href={referralLink}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors"
+                data-ocid="referral.link"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-3">
+              {[
+                {
+                  label: "Referral Code",
+                  value: userProfile?.referralCode ?? "--",
+                },
+                { label: "Commission Rate", value: "20%" },
+                { label: "Paid On", value: "Approval" },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="text-center p-3 rounded-lg"
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    border: "1px solid rgba(123,77,255,0.15)",
+                  }}
+                >
+                  <div className="font-display font-bold text-sm neon-text-cyan">
+                    {item.value}
+                  </div>
+                  <div className="text-muted-foreground text-xs mt-0.5">
+                    {item.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div
+            className="text-center py-6 rounded-xl"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px dashed rgba(123,77,255,0.2)",
+            }}
+            data-ocid="referral.empty_state"
+          >
+            <Lock className="w-8 h-8 mx-auto mb-3 opacity-30" />
+            <p className="text-muted-foreground text-sm">
+              Purchase any plan and get admin approval to unlock your referral
+              link.
+            </p>
+            <a
+              href="/#products"
+              className="neon-btn-primary inline-flex items-center gap-2 mt-4 px-6 py-2 text-sm"
+              data-ocid="referral.primary_button"
+            >
+              View Plans
+            </a>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Deposit & Withdraw */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="neon-card p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: "rgba(38,214,255,0.1)",
+                border: "1px solid rgba(38,214,255,0.2)",
+              }}
+            >
+              <ArrowDownLeft className="w-5 h-5 neon-text-cyan" />
+            </div>
+            <h2 className="font-display font-bold text-xl">Deposit Funds</h2>
+          </div>
+          <form onSubmit={handleDeposit} className="space-y-4">
+            <div>
+              <label
+                htmlFor="deposit-amount"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Amount (₹)
+              </label>
+              <input
+                id="deposit-amount"
+                type="number"
+                min="1"
+                step="1"
+                className="neon-input w-full px-4 py-3"
+                placeholder="Enter amount"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                data-ocid="deposit.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="deposit-method"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Payment Method
+              </label>
+              <select
+                id="deposit-method"
+                className="neon-input w-full px-4 py-3"
+                value={depositMethod}
+                onChange={(e) => setDepositMethod(e.target.value)}
+                data-ocid="deposit.select"
+              >
+                <option value="">Select payment method</option>
+                {paymentMethods.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={deposit.isPending}
+              className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2"
+              data-ocid="deposit.submit_button"
+            >
+              {deposit.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Processing...
+                </>
+              ) : (
+                "Submit Deposit"
+              )}
+            </button>
+          </form>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="neon-card p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: "rgba(201,60,255,0.1)",
+                border: "1px solid rgba(201,60,255,0.2)",
+              }}
+            >
+              <ArrowUpRight className="w-5 h-5 neon-text-magenta" />
+            </div>
+            <h2 className="font-display font-bold text-xl">Withdraw Funds</h2>
+          </div>
+          <form onSubmit={handleWithdraw} className="space-y-4">
+            <div>
+              <label
+                htmlFor="withdraw-amount"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Amount (₹)
+              </label>
+              <input
+                id="withdraw-amount"
+                type="number"
+                min="1"
+                step="1"
+                className="neon-input w-full px-4 py-3"
+                placeholder="Enter amount"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                data-ocid="withdraw.input"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="withdraw-method"
+                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+              >
+                Payment Method
+              </label>
+              <select
+                id="withdraw-method"
+                className="neon-input w-full px-4 py-3"
+                value={withdrawMethod}
+                onChange={(e) => setWithdrawMethod(e.target.value)}
+                data-ocid="withdraw.select"
+              >
+                <option value="">Select payment method</option>
+                {paymentMethods.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={withdraw.isPending}
+              className="neon-btn w-full py-3 flex items-center justify-center gap-2"
+              style={{
+                borderColor: "rgba(201,60,255,0.5)",
+                boxShadow: "0 0 20px rgba(201,60,255,0.2)",
+              }}
+              data-ocid="withdraw.submit_button"
+            >
+              {withdraw.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Processing...
+                </>
+              ) : (
+                "Submit Withdrawal"
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
+
+      {/* Transaction History */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="neon-card p-6"
+      >
+        <h2 className="font-display font-bold text-xl mb-6">
+          Transaction History
+        </h2>
+        {txLoading ? (
+          <div className="space-y-3" data-ocid="transactions.loading_state">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-12 animate-pulse rounded-lg"
+                style={{ background: "rgba(123,77,255,0.1)" }}
+              />
+            ))}
+          </div>
+        ) : myTxs.length === 0 ? (
+          <div
+            className="text-center py-12 text-muted-foreground"
+            data-ocid="transactions.empty_state"
+          >
+            <RefreshCw className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p>No transactions yet. Buy a plan to get started!</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" data-ocid="transactions.table">
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(123,77,255,0.2)" }}>
+                  {["ID", "Type", "Amount", "Method", "Status", "Date"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="text-left py-3 px-3 text-xs uppercase tracking-wider text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {myTxs.map((tx, i) => (
+                  <tr
+                    key={tx.id.toString()}
+                    className="transition-colors hover:bg-white/[0.02]"
+                    style={{ borderBottom: "1px solid rgba(123,77,255,0.1)" }}
+                    data-ocid={`transactions.row.${i + 1}`}
+                  >
+                    <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
+                      #{tx.id.toString()}
+                    </td>
+                    <td className="py-3 px-3">
+                      <TypeBadge txType={String(tx.txType)} />
+                    </td>
+                    <td className="py-3 px-3 font-display font-bold neon-text-cyan">
+                      ₹{Number(tx.amount).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-3 px-3 text-muted-foreground">
+                      {tx.paymentMethod}
+                    </td>
+                    <td className="py-3 px-3">
+                      <StatusBadge status={String(tx.status)} />
+                    </td>
+                    <td className="py-3 px-3 text-muted-foreground text-xs">
+                      {new Date(
+                        Number(tx.createdAt) / 1_000_000,
+                      ).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
