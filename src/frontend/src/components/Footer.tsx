@@ -45,7 +45,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <a
-                  href="/#products"
+                  href="/#plans"
                   className="hover:text-foreground transition-colors"
                 >
                   Basic Plan
@@ -53,7 +53,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="/#products"
+                  href="/#plans"
                   className="hover:text-foreground transition-colors"
                 >
                   Standard Plan
@@ -61,7 +61,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="/#products"
+                  href="/#plans"
                   className="hover:text-foreground transition-colors"
                 >
                   Premium Plan
@@ -69,7 +69,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="/#products"
+                  href="/#plans"
                   className="hover:text-foreground transition-colors"
                 >
                   Enterprise Plan
@@ -119,7 +119,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="/#products"
+                  href="/#plans"
                   className="hover:text-foreground transition-colors"
                 >
                   View Plans

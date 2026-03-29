@@ -33,6 +33,14 @@ function parseMethod(name: string, description: string): MethodInfo {
   }
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
+}
+
 interface Props {
   product: ProductPlan;
   onClose: () => void;
@@ -52,12 +60,23 @@ export default function PaymentModal({ product, onClose }: Props) {
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Build merged list
-  const methods: MethodInfo[] = STANDARD_METHODS.map((stdName) => {
-    const found = backendMethods?.find((m) => m.name === stdName);
-    if (found) return parseMethod(found.name, found.description);
-    return { name: stdName, qrBase64: null, enabled: true };
-  }).filter((m) => m.enabled);
+  // Build merged list — only use fallback when backendMethods is null/undefined (loading)
+  const methodSource: MethodInfo[] =
+    backendMethods === null || backendMethods === undefined
+      ? STANDARD_METHODS.map((n) => ({
+          name: n,
+          qrBase64: null,
+          enabled: true,
+        }))
+      : backendMethods.length === 0
+        ? [] // admin disabled all methods
+        : STANDARD_METHODS.map((stdName) => {
+            const found = backendMethods.find((m) => m.name === stdName);
+            if (found) return parseMethod(found.name, found.description);
+            return { name: stdName, qrBase64: null, enabled: true };
+          });
+
+  const methods = methodSource.filter((m) => m.enabled);
 
   const handleSelectMethod = (method: MethodInfo) => {
     setSelectedMethod(method);
@@ -81,20 +100,19 @@ export default function PaymentModal({ product, onClose }: Props) {
     if (!selectedMethod) return;
 
     try {
-      const txId = await deposit.mutateAsync({
-        amount: product.price,
+      const screenshotBase64 = await fileToBase64(screenshot);
+      const extraNotes = JSON.stringify({
+        type: "plan_purchase",
+        name: name.trim(),
+        txnId: txnId.trim(),
+        screenshot: screenshotBase64,
         paymentMethod: selectedMethod.name,
       });
-      localStorage.setItem(
-        `payment_details_${txId}`,
-        JSON.stringify({
-          name,
-          txnId,
-          amount: Number(product.price),
-          method: selectedMethod.name,
-          product: product.name,
-        }),
-      );
+      await deposit.mutateAsync({
+        amount: product.price,
+        paymentMethod: selectedMethod.name,
+        extraNotes,
+      });
       setSuccess(true);
     } catch {
       toast.error("Submission failed. Please try again.");
@@ -189,13 +207,12 @@ export default function PaymentModal({ product, onClose }: Props) {
                   Your payment request has been submitted successfully.
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  Admin will review and approve within 24 hours. Your referral
-                  system activates after approval.
+                  Admin will review and approve your purchase within 24 hours.
                 </p>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="neon-btn-primary mt-8 px-8 py-3"
+                  className="neon-btn-primary mt-6 px-8 py-2.5 text-sm font-semibold"
                   data-ocid="payment.confirm_button"
                 >
                   Done
@@ -204,213 +221,188 @@ export default function PaymentModal({ product, onClose }: Props) {
             ) : step === "select" ? (
               <motion.div
                 key="select"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {methods.map((method) => (
-                    <div
-                      key={method.name}
-                      className="rounded-xl p-4"
-                      style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(123,77,255,0.2)",
-                      }}
-                      data-ocid="payment.card"
-                    >
-                      <h3 className="font-display font-bold text-base mb-3 neon-text-cyan">
-                        {method.name}
-                      </h3>
-
-                      {/* QR Code */}
+                {methods.length === 0 ? (
+                  <div
+                    className="text-center py-12 text-muted-foreground"
+                    data-ocid="payment.empty_state"
+                  >
+                    <p className="text-sm">
+                      No payment methods are currently available. Please contact
+                      admin.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {methods.map((method) => (
                       <button
-                        type="button"
-                        className="w-full aspect-square rounded-lg mb-3 overflow-hidden flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-                        style={{
-                          background: "rgba(255,255,255,0.05)",
-                          maxHeight: "160px",
-                        }}
-                        onClick={() =>
-                          method.qrBase64 && setLightboxQr(method.qrBase64)
-                        }
-                        data-ocid="payment.button"
-                      >
-                        {method.qrBase64 ? (
-                          <img
-                            src={method.qrBase64}
-                            alt={`${method.name} QR`}
-                            className="w-full h-full object-contain"
-                          />
-                        ) : (
-                          <div className="text-center">
-                            <div className="text-3xl mb-2 opacity-30">⬛</div>
-                            <p className="text-muted-foreground text-xs">
-                              QR Not Set
-                            </p>
-                          </div>
-                        )}
-                      </button>
-
-                      <p className="text-muted-foreground text-xs mb-3">
-                        Scan &amp; Pay with {method.name}
-                      </p>
-
-                      <button
+                        key={method.name}
                         type="button"
                         onClick={() => handleSelectMethod(method)}
-                        className="neon-btn-primary w-full py-2 text-sm"
-                        data-ocid="payment.primary_button"
+                        className="group relative rounded-xl p-4 text-left transition-all hover:scale-[1.02]"
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(123,77,255,0.2)",
+                          boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                        }}
+                        data-ocid="payment.button"
                       >
-                        Select
+                        {method.qrBase64 && (
+                          <div
+                            className="w-full aspect-square rounded-lg overflow-hidden mb-3 bg-white"
+                            style={{ maxHeight: 80 }}
+                          >
+                            <img
+                              src={method.qrBase64}
+                              alt={method.name}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        )}
+                        <div className="font-display font-bold text-sm neon-text-cyan">
+                          {method.name}
+                        </div>
+                        <div className="text-muted-foreground text-xs mt-0.5">
+                          Scan & Pay
+                        </div>
                       </button>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div
                 key="form"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
+                exit={{ opacity: 0 }}
               >
-                <div className="flex items-center gap-3 mb-6">
+                <button
+                  type="button"
+                  onClick={() => setStep("select")}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-5 transition-colors"
+                >
+                  ← Back to methods
+                </button>
+
+                {selectedMethod?.qrBase64 && (
                   <button
                     type="button"
-                    onClick={() => setStep("select")}
-                    className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-1 transition-colors"
-                    data-ocid="payment.button"
+                    className="flex justify-center mb-6 bg-transparent border-none p-0 cursor-pointer"
+                    onClick={() => setLightboxQr(selectedMethod.qrBase64)}
+                    aria-label="View QR code full size"
                   >
-                    ← Back
-                  </button>
-                  <span className="text-muted-foreground">·</span>
-                  <span className="neon-text-cyan text-sm font-semibold">
-                    {selectedMethod?.name}
-                  </span>
-                </div>
-
-                {/* Show QR small */}
-                {selectedMethod?.qrBase64 && (
-                  <div className="flex justify-center mb-6">
-                    <button
-                      type="button"
-                      className="w-32 h-32 rounded-xl overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => setLightboxQr(selectedMethod.qrBase64)}
-                      style={{ border: "1px solid rgba(123,77,255,0.3)" }}
-                      data-ocid="payment.button"
+                    <div
+                      className="rounded-xl overflow-hidden bg-white"
+                      style={{
+                        width: 140,
+                        height: 140,
+                        border: "2px solid rgba(123,77,255,0.4)",
+                      }}
                     >
                       <img
                         src={selectedMethod.qrBase64}
-                        alt="QR"
+                        alt="QR Code"
                         className="w-full h-full object-contain"
                       />
-                    </button>
-                  </div>
+                    </div>
+                  </button>
                 )}
+
+                <p className="text-center text-sm text-muted-foreground mb-5">
+                  Scan the QR code above using{" "}
+                  <span className="neon-text-cyan font-semibold">
+                    {selectedMethod?.name}
+                  </span>
+                  , then fill in the details below.
+                </p>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label
-                      htmlFor="pay-name"
-                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                      htmlFor="pm-name"
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
                     >
-                      Your Name *
+                      Full Name <span className="text-red-400">*</span>
                     </label>
                     <input
+                      id="pm-name"
                       type="text"
-                      className="neon-input w-full px-4 py-3"
-                      id="pay-name"
-                      placeholder="Enter your full name"
+                      required
+                      className="neon-input w-full px-4 py-3 text-sm"
+                      placeholder="Your full name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      required
                       data-ocid="payment.input"
                     />
                   </div>
 
                   <div>
                     <label
-                      htmlFor="pay-txnid"
-                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                      htmlFor="pm-txnid"
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
                     >
-                      Transaction ID *
+                      Transaction ID <span className="text-red-400">*</span>
                     </label>
                     <input
+                      id="pm-txnid"
                       type="text"
-                      className="neon-input w-full px-4 py-3"
-                      id="pay-txnid"
-                      placeholder="Enter your transaction ID"
+                      required
+                      className="neon-input w-full px-4 py-3 text-sm"
+                      placeholder="e.g. TXN123456789"
                       value={txnId}
                       onChange={(e) => setTxnId(e.target.value)}
-                      required
                       data-ocid="payment.input"
                     />
                   </div>
 
                   <div>
                     <label
-                      htmlFor="pay-amount"
-                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                      htmlFor="pm-amount"
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
                     >
-                      Amount (Auto-filled)
+                      Amount
                     </label>
                     <input
+                      id="pm-amount"
                       type="text"
-                      className="neon-input w-full px-4 py-3 opacity-70"
-                      id="pay-amount"
-                      value={`₹${Number(product.price).toLocaleString("en-IN")}`}
-                      disabled
                       readOnly
+                      className="neon-input w-full px-4 py-3 text-sm opacity-70"
+                      value={`₹${Number(product.price).toLocaleString("en-IN")}`}
                       data-ocid="payment.input"
                     />
                   </div>
 
-                  {/* Screenshot upload — label-wrapping pattern for reliable click */}
                   <div>
                     <label
-                      htmlFor="pay-screenshot"
-                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2"
+                      htmlFor="pm-screenshot"
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
                     >
-                      Payment Screenshot *
+                      Payment Screenshot <span className="text-red-400">*</span>
                     </label>
                     <label
-                      htmlFor="pay-screenshot"
-                      className="w-full rounded-xl p-4 text-center cursor-pointer transition-colors block"
+                      htmlFor="pm-screenshot"
+                      className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground"
                       style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: `1px dashed ${
-                          screenshot
-                            ? "rgba(52,211,153,0.5)"
-                            : "rgba(123,77,255,0.3)"
-                        }`,
+                        background: "rgba(255,255,255,0.02)",
+                        border: "1px dashed rgba(123, 77, 255, 0.3)",
                       }}
                       data-ocid="payment.upload_button"
                     >
-                      {screenshot ? (
-                        <div className="text-emerald-400 text-sm font-semibold">
-                          ✓ {screenshot.name}
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-2xl mb-2 opacity-40">📤</div>
-                          <p className="text-muted-foreground text-sm">
-                            Click to upload screenshot
-                          </p>
-                          <p className="text-muted-foreground text-xs mt-1">
-                            PNG, JPG, WEBP accepted
-                          </p>
-                        </div>
-                      )}
+                      <span>📎</span>
+                      {screenshot ? screenshot.name : "Upload screenshot"}
                       <input
-                        id="pay-screenshot"
+                        id="pm-screenshot"
                         type="file"
                         accept="image/*"
+                        required
                         className="hidden"
                         onChange={(e) =>
                           setScreenshot(e.target.files?.[0] ?? null)
                         }
-                        data-ocid="payment.dropzone"
                       />
                     </label>
                   </div>
@@ -418,7 +410,7 @@ export default function PaymentModal({ product, onClose }: Props) {
                   <button
                     type="submit"
                     disabled={deposit.isPending}
-                    className="neon-btn-primary w-full py-3.5 font-semibold flex items-center justify-center gap-2"
+                    className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold mt-2"
                     data-ocid="payment.submit_button"
                   >
                     {deposit.isPending ? (
@@ -447,20 +439,13 @@ export default function PaymentModal({ product, onClose }: Props) {
             className="fixed inset-0 z-[60] flex items-center justify-center p-8"
             style={{ background: "rgba(0,0,0,0.9)" }}
             onClick={() => setLightboxQr(null)}
-            data-ocid="payment.popover"
           >
-            <motion.img
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.8 }}
+            <img
               src={lightboxQr}
-              alt="QR Code"
-              className="max-w-xs w-full rounded-xl"
+              alt="QR Full Size"
+              className="max-w-full max-h-full rounded-2xl"
               style={{ border: "2px solid rgba(123,77,255,0.5)" }}
             />
-            <p className="absolute bottom-8 text-muted-foreground text-sm">
-              Click anywhere to close
-            </p>
           </motion.div>
         )}
       </AnimatePresence>

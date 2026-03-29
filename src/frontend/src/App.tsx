@@ -29,9 +29,6 @@ function RootLayout() {
   const location = useLocation();
   const isAdmin = location.pathname === "/admin";
 
-  const [_userProfile, setUserProfile] = useState<
-    UserProfile | null | undefined
-  >(undefined);
   const [showRegister, setShowRegister] = useState(false);
 
   useEffect(() => {
@@ -39,21 +36,18 @@ function RootLayout() {
     actor
       .getCallerUserProfile()
       .then((profile) => {
-        setUserProfile(profile);
         if (profile === null) setShowRegister(true);
       })
-      .catch(() => setUserProfile(null));
+      .catch(() => {});
   }, [identity, actor, isFetching]);
 
   useEffect(() => {
     if (loginStatus === "idle") {
-      setUserProfile(undefined);
       setShowRegister(false);
     }
   }, [loginStatus]);
 
-  const handleRegistered = (profile: UserProfile) => {
-    setUserProfile(profile);
+  const handleRegistered = (_profile: UserProfile) => {
     setShowRegister(false);
   };
 

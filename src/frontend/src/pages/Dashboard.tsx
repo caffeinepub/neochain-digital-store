@@ -139,12 +139,22 @@ export default function Dashboard() {
   const setW = (key: keyof WithdrawFields, val: string) =>
     setWFields((prev) => ({ ...prev, [key]: val }));
 
+  async function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
+    });
+  }
+
   const [copied, setCopied] = useState(false);
 
   const paymentMethods =
-    paymentMethodsData && paymentMethodsData.length > 0
-      ? paymentMethodsData.map((m) => m.name)
-      : PAYMENT_METHODS_DEFAULT;
+    paymentMethodsData == null
+      ? PAYMENT_METHODS_DEFAULT
+      : paymentMethodsData.length === 0
+        ? []
+        : paymentMethodsData.map((m) => m.name);
 
   const myTxs: Transaction[] = transactions ?? [];
 
@@ -178,7 +188,9 @@ export default function Dashboard() {
           ts >= from.getTime() &&
           (String(tx.txType) === TransactionType.deposit ||
             String(tx.txType) === "referral_bonus" ||
-            String(tx.txType) === TransactionType.purchase)
+            String(tx.txType) === "spin_reward" ||
+            String(tx.txType) === "login_bonus" ||
+            String(tx.txType) === "ad_reward")
         );
       })
       .reduce((sum, tx) => sum + Number(tx.amount), 0);
@@ -209,7 +221,20 @@ export default function Dashboard() {
       return;
     }
     try {
-      await deposit.mutateAsync({ amount, paymentMethod: depositMethod });
+      const screenshotBase64 = dScreenshot
+        ? await fileToBase64(dScreenshot)
+        : "";
+      const extraNotes = JSON.stringify({
+        type: "deposit",
+        name: dName,
+        txId: dTxId,
+        screenshot: screenshotBase64,
+      });
+      await deposit.mutateAsync({
+        amount,
+        paymentMethod: depositMethod,
+        extraNotes,
+      });
       toast.success("Deposit request submitted!");
       setDName("");
       setDTxId("");
@@ -246,7 +271,19 @@ export default function Dashboard() {
       return;
     }
     try {
-      await withdraw.mutateAsync({ amount: amountBig, paymentMethod: method });
+      const extraNotes = JSON.stringify({
+        type: "withdrawal",
+        method,
+        name,
+        id,
+        ifsc: ifsc || "",
+        branch: branch || "",
+      });
+      await withdraw.mutateAsync({
+        amount: amountBig,
+        paymentMethod: method,
+        extraNotes,
+      });
       toast.success(
         "Withdrawal request submitted! Admin will process it shortly.",
       );
@@ -621,7 +658,7 @@ export default function Dashboard() {
               link.
             </p>
             <a
-              href="/#products"
+              href="/#plans"
               className="neon-btn-primary inline-flex items-center gap-2 mt-4 px-6 py-2 text-sm"
               data-ocid="referral.primary_button"
             >

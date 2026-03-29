@@ -1,5 +1,5 @@
-import { Gift, Loader2, User } from "lucide-react";
-import { useState } from "react";
+import { Gift, Loader2, User, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile, backendInterface } from "../backend.d";
 
@@ -9,10 +9,19 @@ interface Props {
   onClose: () => void;
 }
 
-export default function RegisterModal({ actor, onRegistered }: Props) {
+export default function RegisterModal({ actor, onRegistered, onClose }: Props) {
   const [username, setUsername] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,9 +51,23 @@ export default function RegisterModal({ actor, onRegistered }: Props) {
       data-ocid="register.modal"
     >
       <div
-        className="neon-card w-full max-w-md p-8"
+        className="neon-card w-full max-w-md p-8 relative"
         style={{ boxShadow: "0 0 80px rgba(123, 77, 255, 0.3)" }}
       >
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-4 right-4 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          style={{
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(123,77,255,0.2)",
+          }}
+          data-ocid="register.close_button"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
         <div className="text-center mb-8">
           <div
             className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"

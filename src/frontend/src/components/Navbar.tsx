@@ -1,6 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Loader2, LogIn, LogOut, Wallet } from "lucide-react";
-import { useState } from "react";
+import { Loader2, LogIn, LogOut, MoreVertical } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
 import WalletModal from "./WalletModal";
@@ -10,10 +10,12 @@ export default function Navbar() {
   const { data: userProfile } = useUserProfile();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletDefaultTab, setWalletDefaultTab] = useState<
     "deposit" | "withdraw"
   >("deposit");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const openWallet = (tab: "deposit" | "withdraw" = "deposit") => {
     setWalletDefaultTab(tab);
@@ -33,6 +35,22 @@ export default function Navbar() {
   const balance = userProfile?.balance ?? 0n;
   const isLoggedIn = !!identity;
   const hasProfile = !!userProfile;
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+    if (dropdownOpen) {
+      window.addEventListener("mousedown", handleClick);
+    }
+    return () => window.removeEventListener("mousedown", handleClick);
+  }, [dropdownOpen]);
 
   return (
     <>
@@ -87,39 +105,22 @@ export default function Navbar() {
               {isLoggedIn && hasProfile && (
                 <>
                   {/* Balance Badge */}
-                  <button
-                    type="button"
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-display font-bold cursor-pointer"
+                  <div
+                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-display font-bold"
                     style={{
                       background: "rgba(38, 214, 255, 0.1)",
                       border: "1px solid rgba(38, 214, 255, 0.3)",
                       boxShadow: "0 0 12px rgba(38, 214, 255, 0.15)",
                     }}
-                    onClick={() => openWallet("deposit")}
                     data-ocid="nav.panel"
                   >
-                    <span className="text-muted-foreground text-xs">₹</span>
+                    <span className="text-muted-foreground text-xs">
+                      Balance:
+                    </span>
                     <span className="neon-text-cyan">
-                      {Number(balance).toLocaleString("en-IN")}
+                      ₹{Number(balance).toLocaleString("en-IN")}
                     </span>
-                  </button>
-
-                  {/* Wallet Button */}
-                  <button
-                    type="button"
-                    onClick={() => openWallet("deposit")}
-                    className="neon-btn flex items-center gap-1.5 px-3 py-2 text-sm"
-                    style={{
-                      borderColor: "rgba(38, 214, 255, 0.4)",
-                      boxShadow: "0 0 12px rgba(38, 214, 255, 0.15)",
-                    }}
-                    data-ocid="wallet.open_modal_button"
-                  >
-                    <Wallet className="w-4 h-4 neon-text-cyan" />
-                    <span className="hidden md:inline text-xs font-semibold">
-                      Wallet
-                    </span>
-                  </button>
+                  </div>
 
                   {/* Withdraw Button */}
                   <button
@@ -135,28 +136,71 @@ export default function Navbar() {
                   >
                     <span className="text-xs font-semibold">Withdraw</span>
                   </button>
+
+                  {/* 3-dot dropdown menu (desktop) */}
+                  <div className="hidden md:block relative" ref={dropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setDropdownOpen((v) => !v)}
+                      className="neon-btn p-2"
+                      aria-label="Menu"
+                      data-ocid="nav.button"
+                    >
+                      <MoreVertical className="w-5 h-5" />
+                    </button>
+
+                    {dropdownOpen && (
+                      <div
+                        className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50"
+                        style={{
+                          background: "rgba(7, 8, 26, 0.95)",
+                          border: "1px solid rgba(123, 77, 255, 0.35)",
+                          boxShadow:
+                            "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(123,77,255,0.15)",
+                        }}
+                      >
+                        {navLinks.map((link) => (
+                          <Link
+                            key={link.label}
+                            to={link.to as "/" | "/dashboard"}
+                            className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+                            onClick={() => setDropdownOpen(false)}
+                            data-ocid="nav.link"
+                          >
+                            {link.label}
+                          </Link>
+                        ))}
+                        <div
+                          style={{
+                            borderTop: "1px solid rgba(123,77,255,0.2)",
+                          }}
+                        />
+                        {userProfile?.username && (
+                          <div className="px-4 py-2 text-xs text-muted-foreground">
+                            <span className="neon-text-cyan font-display font-semibold">
+                              {userProfile.username}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            clear();
+                            setDropdownOpen(false);
+                          }}
+                          className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors"
+                          data-ocid="nav.button"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Logout
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
 
-              {isLoggedIn && hasProfile && (
-                <div className="hidden md:flex items-center text-sm text-muted-foreground">
-                  <span className="neon-text-cyan font-display font-semibold text-xs">
-                    {userProfile?.username}
-                  </span>
-                </div>
-              )}
-
-              {isLoggedIn ? (
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="neon-btn flex items-center gap-2 px-3 py-2 text-sm"
-                  data-ocid="nav.button"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </button>
-              ) : (
+              {!isLoggedIn && (
                 <button
                   type="button"
                   onClick={login}
@@ -173,24 +217,14 @@ export default function Navbar() {
                 </button>
               )}
 
-              {/* Mobile hamburger */}
+              {/* Mobile 3-dot / hamburger */}
               <button
                 type="button"
                 className="md:hidden neon-btn p-2"
                 onClick={() => setMenuOpen(!menuOpen)}
                 data-ocid="nav.toggle"
               >
-                <div className="w-5 h-5 flex flex-col justify-center gap-1">
-                  <span
-                    className={`block h-0.5 bg-current transition-transform ${menuOpen ? "rotate-45 translate-y-1.5" : ""}`}
-                  />
-                  <span
-                    className={`block h-0.5 bg-current transition-opacity ${menuOpen ? "opacity-0" : ""}`}
-                  />
-                  <span
-                    className={`block h-0.5 bg-current transition-transform ${menuOpen ? "-rotate-45 -translate-y-1.5" : ""}`}
-                  />
-                </div>
+                <MoreVertical className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -228,17 +262,50 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => {
-                      openWallet("deposit");
+                      openWallet("withdraw");
                       setMenuOpen(false);
                     }}
                     className="neon-btn flex items-center gap-2 px-4 py-2 text-sm w-full"
-                    style={{ borderColor: "rgba(38, 214, 255, 0.4)" }}
-                    data-ocid="wallet.open_modal_button"
+                    style={{
+                      borderColor: "rgba(201, 60, 255, 0.4)",
+                      color: "oklch(0.78 0.22 310)",
+                    }}
+                    data-ocid="withdraw.open_modal_button"
                   >
-                    <Wallet className="w-4 h-4 neon-text-cyan" />
-                    Wallet
+                    Withdraw
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clear();
+                      setMenuOpen(false);
+                    }}
+                    className="neon-btn flex items-center gap-2 px-4 py-2 text-sm w-full text-red-400"
+                    data-ocid="nav.button"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
                   </button>
                 </>
+              )}
+              {!isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    login();
+                    setMenuOpen(false);
+                  }}
+                  disabled={isLoggingIn}
+                  className="neon-btn-primary flex items-center gap-2 px-4 py-2 text-sm w-full"
+                  data-ocid="nav.button"
+                >
+                  {isLoggingIn ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <LogIn className="w-4 h-4" />
+                  )}
+                  {isLoggingIn ? "Connecting..." : "Login"}
+                </button>
               )}
             </nav>
           )}

@@ -147,7 +147,9 @@ function MyDashboardSection() {
           ts >= from.getTime() &&
           (String(tx.txType) === TransactionType.deposit ||
             String(tx.txType) === "referral_bonus" ||
-            String(tx.txType) === TransactionType.purchase)
+            String(tx.txType) === "spin_reward" ||
+            String(tx.txType) === "login_bonus" ||
+            String(tx.txType) === "ad_reward")
         );
       })
       .reduce((sum, tx) => sum + Number(tx.amount), 0);

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDownLeft, ArrowUpRight, Loader2, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile } from "../backend.d";
 import {
@@ -116,10 +116,21 @@ export default function WalletModal({
   const withdraw = useWithdraw();
   const { data: paymentMethodsData } = usePaymentMethods();
 
+  // FIX 8: Controlled tabs that sync when defaultTab prop changes
+  const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">(
+    defaultTab,
+  );
+  useEffect(() => {
+    setActiveTab(defaultTab);
+  }, [defaultTab]);
+
+  // FIX 10: Only use fallback when loading (null/undefined), not when empty array
   const paymentMethods =
-    paymentMethodsData && paymentMethodsData.length > 0
-      ? paymentMethodsData.map((m) => m.name)
-      : PAYMENT_METHODS_DEFAULT;
+    paymentMethodsData == null
+      ? PAYMENT_METHODS_DEFAULT
+      : paymentMethodsData.length === 0
+        ? []
+        : paymentMethodsData.map((m) => m.name);
 
   // Deposit state
   const [dName, setDName] = useState("");
@@ -260,7 +271,10 @@ export default function WalletModal({
         </DialogHeader>
 
         <div className="px-6 pb-6 pt-4 max-h-[75vh] overflow-y-auto">
-          <Tabs defaultValue={defaultTab}>
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as "deposit" | "withdraw")}
+          >
             <TabsList
               className="grid grid-cols-2 w-full mb-6"
               style={{
@@ -335,21 +349,27 @@ export default function WalletModal({
                     <FieldLabel htmlFor="w-d-method">
                       Payment Method <span className="text-red-400">*</span>
                     </FieldLabel>
-                    <select
-                      id="w-d-method"
-                      required
-                      className="neon-input w-full px-4 py-2.5 text-sm"
-                      value={dMethod}
-                      onChange={(e) => setDMethod(e.target.value)}
-                      data-ocid="deposit.select"
-                    >
-                      <option value="">Select</option>
-                      {paymentMethods.map((m) => (
-                        <option key={m} value={m}>
-                          {m}
-                        </option>
-                      ))}
-                    </select>
+                    {paymentMethods.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-2.5">
+                        No payment methods available
+                      </p>
+                    ) : (
+                      <select
+                        id="w-d-method"
+                        required
+                        className="neon-input w-full px-4 py-2.5 text-sm"
+                        value={dMethod}
+                        onChange={(e) => setDMethod(e.target.value)}
+                        data-ocid="deposit.select"
+                      >
+                        <option value="">Select</option>
+                        {paymentMethods.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
                 <div>
