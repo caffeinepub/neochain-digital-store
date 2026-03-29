@@ -279,7 +279,7 @@ actor {
   };
 
   // Create deposit request - requires user role
-  public shared ({ caller }) func createDepositRequest(amount : Nat, paymentMethod : Text) : async Nat {
+  public shared ({ caller }) func createDepositRequest(amount : Nat, paymentMethod : Text, extraNotes : Text) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can create deposit requests");
     };
@@ -292,7 +292,7 @@ actor {
     };
 
     let transactionId = getNextTransactionId();
-    let notes = "Deposit request created";
+    let notes = if (extraNotes == "") "Deposit request created" else extraNotes;
     transactions.add(
       transactionId,
       {
@@ -310,7 +310,7 @@ actor {
   };
 
   // Request withdrawal - requires user role
-  public shared ({ caller }) func requestWithdrawal(amount : Nat, paymentMethod : Text) : async Nat {
+  public shared ({ caller }) func requestWithdrawal(amount : Nat, paymentMethod : Text, extraNotes : Text) : async Nat {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can request withdrawals");
     };
@@ -341,7 +341,7 @@ actor {
         userProfiles.add(caller, updatedProfile);
 
         let transactionId = getNextTransactionId();
-        let notes = "Withdrawal request created";
+        let notes = if (extraNotes == "") "Withdrawal request created" else extraNotes;
         transactions.add(
           transactionId,
           {

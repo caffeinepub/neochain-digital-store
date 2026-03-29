@@ -177,13 +177,31 @@ const EMPTY_WITHDRAW: WithdrawFields = {
   amount: "",
 };
 
-// ============================================================
-// MY DASHBOARD SECTION (stats, income, referral, transactions)
-// ============================================================
-function MyDashboardSection() {
-  const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+function UserDashboardSections() {
+  const {
+    data: userProfile,
+    isLoading: profileLoading,
+    refetch: refetchProfile,
+  } = useUserProfile();
   const { data: transactions, isLoading: txLoading } = useAllTransactions();
+  const { data: paymentMethodsData } = usePaymentMethods();
+  const deposit = useDeposit();
+  const withdraw = useWithdraw();
+
+  const [dName, setDName] = useState("");
+  const [dTxId, setDTxId] = useState("");
+  const [depositAmount, setDepositAmount] = useState("");
+  const [depositMethod, setDepositMethod] = useState("");
+  const [dScreenshot, setDScreenshot] = useState<File | null>(null);
+  const [wFields, setWFields] = useState<WithdrawFields>(EMPTY_WITHDRAW);
+  const setW = (key: keyof WithdrawFields, val: string) =>
+    setWFields((prev) => ({ ...prev, [key]: val }));
   const [copied, setCopied] = useState(false);
+
+  const paymentMethods =
+    paymentMethodsData && paymentMethodsData.length > 0
+      ? paymentMethodsData.map((m) => m.name)
+      : PAYMENT_METHODS_DEFAULT;
 
   const myTxs: Transaction[] = transactions ?? [];
 
@@ -235,8 +253,72 @@ function MyDashboardSection() {
     toast.success("Referral link copied!");
   };
 
+  const handleDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dTxId || !depositAmount || !depositMethod) {
+      toast.error("Transaction ID, Amount, and Payment Method are required");
+      return;
+    }
+    const amount = BigInt(Math.floor(Number.parseFloat(depositAmount)));
+    if (amount <= 0n) {
+      toast.error("Invalid amount");
+      return;
+    }
+    try {
+      await deposit.mutateAsync({ amount, paymentMethod: depositMethod });
+      toast.success("Deposit request submitted!");
+      setDName("");
+      setDTxId("");
+      setDepositAmount("");
+      setDepositMethod("");
+      setDScreenshot(null);
+      refetchProfile();
+    } catch {
+      toast.error("Deposit failed. Please try again.");
+    }
+  };
+
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { method, name, id, ifsc, branch, amount } = wFields;
+    if (!method || !name || !id || !amount) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+    if (isBankMethod(method) && (!ifsc || !branch)) {
+      toast.error("IFSC Code and Branch Name are required for bank withdrawal");
+      return;
+    }
+    const amountBig = BigInt(Math.floor(Number.parseFloat(amount)));
+    if (amountBig <= 0n) {
+      toast.error("Invalid amount");
+      return;
+    }
+    const balance = userProfile?.balance ?? 0n;
+    if (amountBig > balance) {
+      toast.error(
+        `Insufficient balance. Available: ₹${Number(balance).toLocaleString("en-IN")}`,
+      );
+      return;
+    }
+    try {
+      await withdraw.mutateAsync({ amount: amountBig, paymentMethod: method });
+      toast.success(
+        "Withdrawal request submitted! Admin will process it shortly.",
+      );
+      setWFields(EMPTY_WITHDRAW);
+      refetchProfile();
+    } catch {
+      toast.error("Withdrawal failed. Please try again.");
+    }
+  };
+
+  const inputClass = "neon-input w-full px-4 py-3 text-sm";
+  const labelClass =
+    "block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2";
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
       {/* Section Divider */}
       <div className="flex items-center gap-4 mb-12">
         <div
@@ -503,9 +585,7 @@ function MyDashboardSection() {
               background: referralActive
                 ? "rgba(52,211,153,0.1)"
                 : "rgba(123,77,255,0.1)",
-              border: `1px solid ${
-                referralActive ? "rgba(52,211,153,0.2)" : "rgba(123,77,255,0.2)"
-              }`,
+              border: `1px solid ${referralActive ? "rgba(52,211,153,0.2)" : "rgba(123,77,255,0.2)"}`,
             }}
           >
             {referralActive ? (
@@ -516,52 +596,56 @@ function MyDashboardSection() {
           </div>
           <div>
             <h3 className="font-display font-bold text-xl">Referral System</h3>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-sm">
               {referralActive
-                ? "Share your link and earn 20% commission"
-                : "Buy a plan and get approved to unlock referrals"}
+                ? "Earn 20% on every successful referral"
+                : "Complete a purchase to unlock"}
             </p>
           </div>
         </div>
-
         {referralActive && referralLink ? (
-          <div className="space-y-4">
+          <div>
+            <p className="text-muted-foreground text-sm mb-3">
+              Your referral link:
+            </p>
             <div
-              className="flex items-center gap-2 p-3 rounded-xl"
+              className="flex items-center gap-3 p-3 rounded-xl"
               style={{
-                background: "rgba(52,211,153,0.05)",
-                border: "1px solid rgba(52,211,153,0.2)",
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(123,77,255,0.2)",
               }}
             >
-              <input
-                readOnly
-                value={referralLink}
-                className="flex-1 bg-transparent text-sm font-mono text-emerald-400 outline-none"
-                data-ocid="referral.input"
-              />
+              <span className="flex-1 font-mono text-sm neon-text-cyan truncate">
+                {referralLink}
+              </span>
               <button
                 type="button"
                 onClick={handleCopyReferral}
-                className="p-2 rounded-lg transition-colors hover:bg-white/5"
-                data-ocid="referral.toggle"
+                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: "rgba(38,214,255,0.1)",
+                  border: "1px solid rgba(38,214,255,0.3)",
+                }}
+                data-ocid="referral.button"
               >
                 {copied ? (
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-3 h-3 text-emerald-400" />
                 ) : (
-                  <Copy className="w-4 h-4 text-muted-foreground" />
+                  <Copy className="w-3 h-3" />
                 )}
+                {copied ? "Copied!" : "Copy"}
               </button>
               <a
                 href={referralLink}
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-lg transition-colors hover:bg-white/5"
+                className="shrink-0 p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
                 data-ocid="referral.link"
               >
-                <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                <ExternalLink className="w-4 h-4" />
               </a>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="mt-4 grid grid-cols-3 gap-3">
               {[
                 {
                   label: "Referral Code",
@@ -603,7 +687,7 @@ function MyDashboardSection() {
               link.
             </p>
             <a
-              href="#plans"
+              href="#products"
               className="neon-btn-primary inline-flex items-center gap-2 mt-4 px-6 py-2 text-sm"
               data-ocid="referral.primary_button"
             >
@@ -613,195 +697,8 @@ function MyDashboardSection() {
         )}
       </motion.div>
 
-      {/* Transaction History */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="neon-card p-6"
-      >
-        <h3 className="font-display font-bold text-xl mb-6">
-          Transaction History
-        </h3>
-        {txLoading ? (
-          <div className="space-y-3" data-ocid="transactions.loading_state">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-12 animate-pulse rounded-lg"
-                style={{ background: "rgba(123,77,255,0.1)" }}
-              />
-            ))}
-          </div>
-        ) : myTxs.length === 0 ? (
-          <div
-            className="text-center py-12 text-muted-foreground"
-            data-ocid="transactions.empty_state"
-          >
-            <RefreshCw className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p>No transactions yet. Buy a plan to get started!</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-ocid="transactions.table">
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(123,77,255,0.2)" }}>
-                  {["ID", "Type", "Amount", "Method", "Status", "Date"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="text-left py-3 px-3 text-xs uppercase tracking-wider text-muted-foreground"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {myTxs.map((tx, i) => (
-                  <tr
-                    key={tx.id.toString()}
-                    className="transition-colors hover:bg-white/[0.02]"
-                    style={{ borderBottom: "1px solid rgba(123,77,255,0.1)" }}
-                    data-ocid={`transactions.row.${i + 1}`}
-                  >
-                    <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
-                      #{tx.id.toString()}
-                    </td>
-                    <td className="py-3 px-3">
-                      <TypeBadge txType={String(tx.txType)} />
-                    </td>
-                    <td className="py-3 px-3 font-display font-bold neon-text-cyan">
-                      ₹{Number(tx.amount).toLocaleString("en-IN")}
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground">
-                      {tx.paymentMethod}
-                    </td>
-                    <td className="py-3 px-3">
-                      <StatusBadge status={String(tx.status)} />
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground text-xs">
-                      {new Date(
-                        Number(tx.createdAt) / 1_000_000,
-                      ).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </motion.div>
-    </div>
-  );
-}
-
-// ============================================================
-// DEPOSIT & WITHDRAWAL SECTION
-// ============================================================
-function DepositWithdrawSection() {
-  const { data: userProfile, refetch: refetchProfile } = useUserProfile();
-  const { data: paymentMethodsData } = usePaymentMethods();
-  const deposit = useDeposit();
-  const withdraw = useWithdraw();
-
-  const [dName, setDName] = useState("");
-  const [dTxId, setDTxId] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
-  const [depositMethod, setDepositMethod] = useState("");
-  const [dScreenshot, setDScreenshot] = useState<File | null>(null);
-  const [wFields, setWFields] = useState<WithdrawFields>(EMPTY_WITHDRAW);
-  const setW = (key: keyof WithdrawFields, val: string) =>
-    setWFields((prev) => ({ ...prev, [key]: val }));
-
-  const paymentMethods =
-    paymentMethodsData && paymentMethodsData.length > 0
-      ? paymentMethodsData.map((m) => m.name)
-      : PAYMENT_METHODS_DEFAULT;
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dTxId || !depositAmount || !depositMethod) {
-      toast.error("Transaction ID, Amount, and Payment Method are required");
-      return;
-    }
-    const amount = BigInt(Math.floor(Number.parseFloat(depositAmount)));
-    if (amount <= 0n) {
-      toast.error("Invalid amount");
-      return;
-    }
-    try {
-      await deposit.mutateAsync({ amount, paymentMethod: depositMethod });
-      toast.success("Deposit request submitted!");
-      setDName("");
-      setDTxId("");
-      setDepositAmount("");
-      setDepositMethod("");
-      setDScreenshot(null);
-      refetchProfile();
-    } catch {
-      toast.error("Deposit failed. Please try again.");
-    }
-  };
-
-  const handleWithdraw = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { method, name, id, ifsc, branch, amount } = wFields;
-    if (!method || !name || !id || !amount) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-    if (isBankMethod(method) && (!ifsc || !branch)) {
-      toast.error("IFSC Code and Branch Name are required for bank withdrawal");
-      return;
-    }
-    const amountBig = BigInt(Math.floor(Number.parseFloat(amount)));
-    if (amountBig <= 0n) {
-      toast.error("Invalid amount");
-      return;
-    }
-    const balance = userProfile?.balance ?? 0n;
-    if (amountBig > balance) {
-      toast.error(
-        `Insufficient balance. Available: ₹${Number(balance).toLocaleString("en-IN")}`,
-      );
-      return;
-    }
-    try {
-      await withdraw.mutateAsync({ amount: amountBig, paymentMethod: method });
-      toast.success(
-        "Withdrawal request submitted! Admin will process it shortly.",
-      );
-      setWFields(EMPTY_WITHDRAW);
-      refetchProfile();
-    } catch {
-      toast.error("Withdrawal failed. Please try again.");
-    }
-  };
-
-  const inputClass = "neon-input w-full px-4 py-3 text-sm";
-  const labelClass =
-    "block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2";
-
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-      {/* Section Divider */}
-      <div className="flex items-center gap-4 mb-12">
-        <div
-          className="flex-1 h-px"
-          style={{ background: "rgba(38,214,255,0.2)" }}
-        />
-        <h2 className="font-display font-black text-3xl sm:text-4xl whitespace-nowrap neon-text-cyan">
-          Deposit &amp; Withdrawal
-        </h2>
-        <div
-          className="flex-1 h-px"
-          style={{ background: "rgba(38,214,255,0.2)" }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Deposit & Withdraw */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
         {/* DEPOSIT */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1101,201 +998,91 @@ function DepositWithdrawSection() {
           </form>
         </motion.div>
       </div>
-    </div>
-  );
-}
 
-// ============================================================
-// PLANS SECTION (shared between logged-in and guest)
-// ============================================================
-function PlansSection({
-  onBuyNow,
-}: {
-  onBuyNow: (product: Product) => void;
-}) {
-  return (
-    <section id="plans" className="px-4 pb-24">
+      {/* Transaction History */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="text-center mb-14"
+        className="neon-card p-6"
       >
-        <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
-          <span className="gradient-text">Choose Your Plan</span>
-        </h2>
-        <p className="text-muted-foreground max-w-md mx-auto">
-          One-time purchase. Activate your referral link after approval and
-          start earning 20% commission instantly.
-        </p>
-      </motion.div>
-
-      <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
-          {PRODUCTS.map((product, i) => (
-            <motion.div
-              key={product.id.toString()}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-              whileHover={{ y: -8 }}
-              className="relative w-72 max-w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
-              style={{
-                background:
-                  "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
-                border: `1px solid ${BORDER_COLORS[product.color]}`,
-                boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                  `0 8px 30px ${GLOW_COLORS[product.color]}, 0 4px 20px rgba(0,0,0,0.5)`;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                  "0 4px 20px rgba(0,0,0,0.4)";
-              }}
-              data-ocid={`products.card.${i + 1}`}
-            >
+        <h3 className="font-display font-bold text-xl mb-6">
+          Transaction History
+        </h3>
+        {txLoading ? (
+          <div className="space-y-3" data-ocid="transactions.loading_state">
+            {[1, 2, 3].map((i) => (
               <div
-                className="absolute top-3 right-3 text-xs font-bold px-2 py-0.5 rounded-full"
-                style={{
-                  background: "rgba(52,211,153,0.15)",
-                  border: "1px solid rgba(52,211,153,0.4)",
-                  color: "rgb(52,211,153)",
-                  boxShadow: "0 0 10px rgba(52,211,153,0.3)",
-                }}
-              >
-                10% Cashback
-              </div>
-              <h3
-                className={`font-display font-bold text-lg mb-3 ${TEXT_CLASSES[product.color]}`}
-              >
-                {product.name}
-              </h3>
-              <div className="mb-4">
-                <span className="font-display font-black text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-                  ₹{Number(product.price).toLocaleString("en-IN")}
-                </span>
-              </div>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                {product.description}
-              </p>
-              <div
-                className="rounded-xl px-3 py-2.5 mb-5 text-xs leading-relaxed"
-                style={{
-                  background: "rgba(52,211,153,0.06)",
-                  border: "1px solid rgba(52,211,153,0.25)",
-                  boxShadow: "0 0 12px rgba(52,211,153,0.08)",
-                  color: "rgba(52,211,153,0.9)",
-                }}
-              >
-                🤝 Buy this product and share with your friends. When your
-                friend signs up and purchases any product, you will earn{" "}
-                <strong>20% commission</strong>.
-              </div>
-              <ul className="space-y-1.5 mb-6 flex-1">
-                {[
-                  "One-time purchase",
-                  "Beginner-friendly",
-                  "Referral earnings",
-                  "Secure & fast",
-                ].map((f) => (
-                  <li
-                    key={f}
-                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                key={i}
+                className="h-12 animate-pulse rounded-lg"
+                style={{ background: "rgba(123,77,255,0.1)" }}
+              />
+            ))}
+          </div>
+        ) : myTxs.length === 0 ? (
+          <div
+            className="text-center py-12 text-muted-foreground"
+            data-ocid="transactions.empty_state"
+          >
+            <RefreshCw className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p>No transactions yet. Buy a plan to get started!</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" data-ocid="transactions.table">
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(123,77,255,0.2)" }}>
+                  {["ID", "Type", "Amount", "Method", "Status", "Date"].map(
+                    (h) => (
+                      <th
+                        key={h}
+                        className="text-left py-3 px-3 text-xs uppercase tracking-wider text-muted-foreground"
+                      >
+                        {h}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {myTxs.map((tx, i) => (
+                  <tr
+                    key={tx.id.toString()}
+                    className="transition-colors hover:bg-white/[0.02]"
+                    style={{ borderBottom: "1px solid rgba(123,77,255,0.1)" }}
+                    data-ocid={`transactions.row.${i + 1}`}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
-                    {f}
-                  </li>
+                    <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
+                      #{tx.id.toString()}
+                    </td>
+                    <td className="py-3 px-3">
+                      <TypeBadge txType={String(tx.txType)} />
+                    </td>
+                    <td className="py-3 px-3 font-display font-bold neon-text-cyan">
+                      ₹{Number(tx.amount).toLocaleString("en-IN")}
+                    </td>
+                    <td className="py-3 px-3 text-muted-foreground">
+                      {tx.paymentMethod}
+                    </td>
+                    <td className="py-3 px-3">
+                      <StatusBadge status={String(tx.status)} />
+                    </td>
+                    <td className="py-3 px-3 text-muted-foreground text-xs">
+                      {new Date(
+                        Number(tx.createdAt) / 1_000_000,
+                      ).toLocaleDateString()}
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-              <button
-                type="button"
-                onClick={() => onBuyNow(product)}
-                className="neon-btn-primary w-full py-3 text-sm font-semibold"
-                data-ocid={`products.primary_button.${i + 1}`}
-              >
-                Buy Now
-              </button>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </motion.div>
+    </div>
   );
 }
 
-// ============================================================
-// HOW IT WORKS SECTION
-// ============================================================
-function HowItWorksSection() {
-  return (
-    <section className="px-4 pb-24">
-      <div className="max-w-4xl mx-auto">
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="font-display font-black text-3xl sm:text-4xl text-center mb-14 gradient-text"
-        >
-          How It Works
-        </motion.h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {[
-            {
-              step: "01",
-              title: "Buy a Plan",
-              desc: "Select any plan and complete payment via QR code. Submit your transaction ID and screenshot.",
-              color: "cyan",
-            },
-            {
-              step: "02",
-              title: "Get Approved",
-              desc: "Admin verifies and approves your payment within 24 hours. Your referral link activates instantly.",
-              color: "violet",
-            },
-            {
-              step: "03",
-              title: "Earn 20%",
-              desc: "Share your referral link. Earn 20% commission on every friend who purchases and gets approved.",
-              color: "magenta",
-            },
-          ].map((item, i) => (
-            <motion.div
-              key={item.step}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.15 }}
-              className="neon-card p-6 text-center"
-            >
-              <div
-                className={`font-display font-black text-5xl mb-4 ${TEXT_CLASSES[item.color]}`}
-                style={{ opacity: 0.3 }}
-              >
-                {item.step}
-              </div>
-              <h3
-                className={`font-display font-bold text-lg mb-2 ${TEXT_CLASSES[item.color]}`}
-              >
-                {item.title}
-              </h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {item.desc}
-              </p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ============================================================
-// MAIN LANDING PAGE
-// ============================================================
 export default function LandingPage() {
   const { identity, login } = useInternetIdentity();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -1310,111 +1097,256 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen">
-      {identity ? (
-        // ===== LOGGED-IN LAYOUT =====
-        <>
-          {/* 1. My Dashboard (top) */}
-          <section className="pt-8">
-            <MyDashboardSection />
-          </section>
+      {/* ===== HERO ===== */}
+      <section className="relative flex flex-col items-center justify-center text-center px-4 py-24 sm:py-36 overflow-hidden">
+        <div
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 pointer-events-none"
+          style={{ background: "oklch(0.52 0.22 280)" }}
+        />
+        <div
+          className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-[100px] opacity-15 pointer-events-none"
+          style={{ background: "oklch(0.82 0.18 210)" }}
+        />
 
-          {/* 2. Plans Section */}
-          <PlansSection onBuyNow={handleBuyNow} />
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          className="relative z-10 max-w-3xl mx-auto"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-6"
+            style={{
+              background: "rgba(38,214,255,0.1)",
+              border: "1px solid rgba(38,214,255,0.3)",
+              color: "oklch(0.82 0.18 210)",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Referral System Active — Earn 20% Per Sale
+          </motion.div>
 
-          {/* 3. How It Works */}
-          <HowItWorksSection />
+          <h1 className="font-display font-black text-5xl sm:text-7xl leading-tight mb-6">
+            <span className="gradient-text">Earn 20% On</span>
+            <br />
+            <span className="text-foreground">Every Referral</span>
+          </h1>
 
-          {/* 4. Deposit & Withdrawal (bottom) */}
-          <section>
-            <DepositWithdrawSection />
-          </section>
-        </>
-      ) : (
-        // ===== GUEST LAYOUT =====
-        <>
-          {/* Hero */}
-          <section className="relative flex flex-col items-center justify-center text-center px-4 py-24 sm:py-36 overflow-hidden">
-            <div
-              className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 pointer-events-none"
-              style={{ background: "oklch(0.52 0.22 280)" }}
-            />
-            <div
-              className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-[100px] opacity-15 pointer-events-none"
-              style={{ background: "oklch(0.82 0.18 210)" }}
-            />
+          <p className="text-muted-foreground text-lg sm:text-xl max-w-xl mx-auto mb-10 leading-relaxed">
+            Buy once. Refer friends. Earn real money — 20% commission for every
+            friend who joins and purchases a plan.
+          </p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7 }}
-              className="relative z-10 max-w-3xl mx-auto"
-            >
+          <a
+            href="#products"
+            className="neon-btn-primary inline-flex items-center gap-2 px-8 py-4 text-base font-semibold"
+            data-ocid="hero.primary_button"
+          >
+            View Plans
+          </a>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+          className="relative z-10 mt-16 flex flex-wrap justify-center gap-8 sm:gap-16"
+        >
+          {[
+            { label: "Active Users", value: "2,400+" },
+            { label: "Commission Rate", value: "20%" },
+            { label: "Cashback", value: "10%" },
+            { label: "Approval Time", value: "< 24h" },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="font-display font-black text-2xl neon-text-cyan">
+                {stat.value}
+              </div>
+              <div className="text-muted-foreground text-xs uppercase tracking-wider mt-1">
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* ===== PRODUCTS ===== */}
+      <section id="products" className="px-4 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-14"
+        >
+          <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
+            <span className="gradient-text">Choose Your Plan</span>
+          </h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            One-time purchase. Activate your referral link after approval and
+            start earning 20% commission instantly.
+          </p>
+        </motion.div>
+
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+            {PRODUCTS.map((product, i) => (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-6"
+                key={product.id.toString()}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                whileHover={{ y: -8 }}
+                className="relative w-72 max-w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
                 style={{
-                  background: "rgba(38,214,255,0.1)",
-                  border: "1px solid rgba(38,214,255,0.3)",
-                  color: "oklch(0.82 0.18 210)",
+                  background:
+                    "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
+                  border: `1px solid ${BORDER_COLORS[product.color]}`,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
                 }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow =
+                    `0 8px 30px ${GLOW_COLORS[product.color]}, 0 4px 20px rgba(0,0,0,0.5)`;
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.boxShadow =
+                    "0 4px 20px rgba(0,0,0,0.4)";
+                }}
+                data-ocid={`products.card.${i + 1}`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Referral System Active — Earn 20% Per Sale
-              </motion.div>
-
-              <h1 className="font-display font-black text-5xl sm:text-7xl leading-tight mb-6">
-                <span className="gradient-text">Earn 20% On</span>
-                <br />
-                <span className="text-foreground">Every Referral</span>
-              </h1>
-
-              <p className="text-muted-foreground text-lg sm:text-xl max-w-xl mx-auto mb-10 leading-relaxed">
-                Buy once. Refer friends. Earn real money — 20% commission for
-                every friend who joins and purchases a plan.
-              </p>
-
-              <a
-                href="#plans"
-                className="neon-btn-primary inline-flex items-center gap-2 px-8 py-4 text-base font-semibold"
-                data-ocid="hero.primary_button"
-              >
-                View Plans
-              </a>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="relative z-10 mt-16 flex flex-wrap justify-center gap-8 sm:gap-16"
-            >
-              {[
-                { label: "Active Users", value: "2,400+" },
-                { label: "Commission Rate", value: "20%" },
-                { label: "Cashback", value: "10%" },
-                { label: "Approval Time", value: "< 24h" },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center">
-                  <div className="font-display font-black text-2xl neon-text-cyan">
-                    {stat.value}
-                  </div>
-                  <div className="text-muted-foreground text-xs uppercase tracking-wider mt-1">
-                    {stat.label}
-                  </div>
+                <div
+                  className="absolute top-3 right-3 text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(52,211,153,0.15)",
+                    border: "1px solid rgba(52,211,153,0.4)",
+                    color: "rgb(52,211,153)",
+                    boxShadow: "0 0 10px rgba(52,211,153,0.3)",
+                  }}
+                >
+                  10% Cashback
                 </div>
-              ))}
-            </motion.div>
-          </section>
+                <h3
+                  className={`font-display font-bold text-lg mb-3 ${TEXT_CLASSES[product.color]}`}
+                >
+                  {product.name}
+                </h3>
+                <div className="mb-4">
+                  <span className="font-display font-black text-4xl bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+                    ₹{Number(product.price).toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-4">
+                  {product.description}
+                </p>
+                <div
+                  className="rounded-xl px-3 py-2.5 mb-5 text-xs leading-relaxed"
+                  style={{
+                    background: "rgba(52,211,153,0.06)",
+                    border: "1px solid rgba(52,211,153,0.25)",
+                    boxShadow: "0 0 12px rgba(52,211,153,0.08)",
+                    color: "rgba(52,211,153,0.9)",
+                  }}
+                >
+                  🤝 Buy this product and share with your friends. When your
+                  friend signs up and purchases any product, you will earn{" "}
+                  <strong>20% commission</strong>.
+                </div>
+                <ul className="space-y-1.5 mb-6 flex-1">
+                  {[
+                    "One-time purchase",
+                    "Beginner-friendly",
+                    "Referral earnings",
+                    "Secure & fast",
+                  ].map((f) => (
+                    <li
+                      key={f}
+                      className="flex items-center gap-2 text-xs text-muted-foreground"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  onClick={() => handleBuyNow(product)}
+                  className="neon-btn-primary w-full py-3 text-sm font-semibold"
+                  data-ocid={`products.primary_button.${i + 1}`}
+                >
+                  Buy Now
+                </button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {/* Plans */}
-          <PlansSection onBuyNow={handleBuyNow} />
+      {/* ===== HOW IT WORKS ===== */}
+      <section className="px-4 pb-24">
+        <div className="max-w-4xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="font-display font-black text-3xl sm:text-4xl text-center mb-14 gradient-text"
+          >
+            How It Works
+          </motion.h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[
+              {
+                step: "01",
+                title: "Buy a Plan",
+                desc: "Select any plan and complete payment via QR code. Submit your transaction ID and screenshot.",
+                color: "cyan",
+              },
+              {
+                step: "02",
+                title: "Get Approved",
+                desc: "Admin verifies and approves your payment within 24 hours. Your referral link activates instantly.",
+                color: "violet",
+              },
+              {
+                step: "03",
+                title: "Earn 20%",
+                desc: "Share your referral link. Earn 20% commission on every friend who purchases and gets approved.",
+                color: "magenta",
+              },
+            ].map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="neon-card p-6 text-center"
+              >
+                <div
+                  className={`font-display font-black text-5xl mb-4 ${TEXT_CLASSES[item.color]}`}
+                  style={{ opacity: 0.3 }}
+                >
+                  {item.step}
+                </div>
+                <h3
+                  className={`font-display font-bold text-lg mb-2 ${TEXT_CLASSES[item.color]}`}
+                >
+                  {item.title}
+                </h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {item.desc}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          {/* How It Works */}
-          <HowItWorksSection />
-        </>
-      )}
+      {/* ===== DASHBOARD SECTIONS (logged in only) ===== */}
+      {identity && <UserDashboardSections />}
 
       {/* Payment Modal */}
       <AnimatePresence>

@@ -101,9 +101,15 @@ export function useDeposit() {
     mutationFn: async ({
       amount,
       paymentMethod,
-    }: { amount: bigint; paymentMethod: string }) => {
+      extraNotes,
+    }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.createDepositRequest(amount, paymentMethod);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (actor as any).createDepositRequest(
+        amount,
+        paymentMethod,
+        extraNotes ?? "",
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["userProfile"] });
@@ -119,9 +125,15 @@ export function useWithdraw() {
     mutationFn: async ({
       amount,
       paymentMethod,
-    }: { amount: bigint; paymentMethod: string }) => {
+      extraNotes,
+    }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
-      return actor.requestWithdrawal(amount, paymentMethod);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (actor as any).requestWithdrawal(
+        amount,
+        paymentMethod,
+        extraNotes ?? "",
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["userProfile"] });

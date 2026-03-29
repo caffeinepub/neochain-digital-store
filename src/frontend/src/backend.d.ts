@@ -58,7 +58,7 @@ export interface backendInterface {
     addPaymentMethod(newPaymentMethod: PaymentMethod): Promise<void>;
     approveTransaction(transactionId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    createDepositRequest(amount: bigint, paymentMethod: string): Promise<bigint>;
+    createDepositRequest(amount: bigint, paymentMethod: string, extraNotes: string): Promise<bigint>;
     getAllPaymentMethods(): Promise<Array<PaymentMethod>>;
     getAllProductPlans(): Promise<Array<ProductPlan>>;
     getAllTransactions(): Promise<Array<Transaction>>;
@@ -76,7 +76,7 @@ export interface backendInterface {
     registerUser(username: string, referralCode: string | null): Promise<UserProfile>;
     rejectTransaction(transactionId: bigint): Promise<void>;
     removePaymentMethod(name: string): Promise<void>;
-    requestWithdrawal(amount: bigint, paymentMethod: string): Promise<bigint>;
+    requestWithdrawal(amount: bigint, paymentMethod: string, extraNotes: string): Promise<bigint>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateUserBalance(user: Principal, newBalance: bigint): Promise<void>;
     updateUserRole(user: Principal, role: UserRole): Promise<void>;

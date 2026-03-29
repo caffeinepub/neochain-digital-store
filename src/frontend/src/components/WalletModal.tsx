@@ -58,9 +58,9 @@ function FieldLabel({
 type WithdrawFields = {
   method: string;
   name: string;
-  id: string; // eSewa ID / Khalti ID / UPI ID / Account Number
-  ifsc: string; // bank only
-  branch: string; // bank only
+  id: string;
+  ifsc: string;
+  branch: string;
   amount: string;
 };
 
@@ -95,6 +95,14 @@ function getIdLabel(method: string): string {
     default:
       return "Account / ID";
   }
+}
+
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function WalletModal({
@@ -136,7 +144,16 @@ export default function WalletModal({
       return;
     }
     try {
-      await deposit.mutateAsync({ amount, paymentMethod: dMethod });
+      const screenshotBase64 = dScreenshot
+        ? await fileToBase64(dScreenshot)
+        : "";
+      const extraNotes = JSON.stringify({
+        type: "deposit",
+        name: dName,
+        txId: dTxId,
+        screenshot: screenshotBase64,
+      });
+      await deposit.mutateAsync({ amount, paymentMethod: dMethod, extraNotes });
       toast.success("Deposit request submitted successfully!");
       setDName("");
       setDTxId("");
@@ -172,7 +189,19 @@ export default function WalletModal({
       return;
     }
     try {
-      await withdraw.mutateAsync({ amount: amountBig, paymentMethod: method });
+      const extraNotes = JSON.stringify({
+        type: "withdrawal",
+        method,
+        name,
+        id,
+        ifsc: ifsc || "",
+        branch: branch || "",
+      });
+      await withdraw.mutateAsync({
+        amount: amountBig,
+        paymentMethod: method,
+        extraNotes,
+      });
       toast.success(
         "Withdrawal request submitted! Admin will process it shortly.",
       );
