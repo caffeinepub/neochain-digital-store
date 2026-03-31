@@ -75,45 +75,12 @@ const TEXT_CLASSES: Record<string, string> = {
 
 type Product = (typeof PRODUCTS)[0];
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
-    approved: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
-    completed: "text-emerald-400 bg-emerald-400/10 border-emerald-400/30",
-    rejected: "text-red-400 bg-red-400/10 border-red-400/30",
-  };
-  return (
-    <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border capitalize ${
-        styles[status] ?? "text-muted-foreground"
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function TypeBadge({ txType }: { txType: string }) {
-  const icons: Record<string, string> = {
-    deposit: "↑",
-    withdrawal: "↓",
-    referral_bonus: "★",
-    purchase: "◈",
-  };
-  const label = txType.replace("_", " ");
-  return (
-    <span className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground">
-      <span className="neon-text-cyan">{icons[txType] ?? "•"}</span> {label}
-    </span>
-  );
-}
-
 // ============================================================
 // MY DASHBOARD SECTION (stats, income, referral, transactions)
 // ============================================================
 function MyDashboardSection() {
   const { data: userProfile, isLoading: profileLoading } = useUserProfile();
-  const { data: transactions, isLoading: txLoading } = useAllTransactions();
+  const { data: transactions } = useAllTransactions();
   const [copied, setCopied] = useState(false);
 
   const myTxs: Transaction[] = transactions ?? [];
@@ -545,87 +512,6 @@ function MyDashboardSection() {
           </div>
         )}
       </motion.div>
-
-      {/* Transaction History */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        className="neon-card p-6"
-      >
-        <h3 className="font-display font-bold text-xl mb-6">
-          Transaction History
-        </h3>
-        {txLoading ? (
-          <div className="space-y-3" data-ocid="transactions.loading_state">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-12 animate-pulse rounded-lg"
-                style={{ background: "rgba(123,77,255,0.1)" }}
-              />
-            ))}
-          </div>
-        ) : myTxs.length === 0 ? (
-          <div
-            className="text-center py-12 text-muted-foreground"
-            data-ocid="transactions.empty_state"
-          >
-            <RefreshCw className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p>No transactions yet. Buy a plan to get started!</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-ocid="transactions.table">
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(123,77,255,0.2)" }}>
-                  {["ID", "Type", "Amount", "Method", "Status", "Date"].map(
-                    (h) => (
-                      <th
-                        key={h}
-                        className="text-left py-3 px-3 text-xs uppercase tracking-wider text-muted-foreground"
-                      >
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {myTxs.map((tx, i) => (
-                  <tr
-                    key={tx.id.toString()}
-                    className="transition-colors hover:bg-white/[0.02]"
-                    style={{ borderBottom: "1px solid rgba(123,77,255,0.1)" }}
-                    data-ocid={`transactions.row.${i + 1}`}
-                  >
-                    <td className="py-3 px-3 font-mono text-xs text-muted-foreground">
-                      #{tx.id.toString()}
-                    </td>
-                    <td className="py-3 px-3">
-                      <TypeBadge txType={String(tx.txType)} />
-                    </td>
-                    <td className="py-3 px-3 font-display font-bold neon-text-cyan">
-                      ₹{Number(tx.amount).toLocaleString("en-IN")}
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground">
-                      {tx.paymentMethod}
-                    </td>
-                    <td className="py-3 px-3">
-                      <StatusBadge status={String(tx.status)} />
-                    </td>
-                    <td className="py-3 px-3 text-muted-foreground text-xs">
-                      {new Date(
-                        Number(tx.createdAt) / 1_000_000,
-                      ).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </motion.div>
     </div>
   );
 }
@@ -846,10 +732,7 @@ export default function LandingPage() {
           {/* 2. Plans Section */}
           <PlansSection onBuyNow={handleBuyNow} />
 
-          {/* 3. How It Works */}
-          <HowItWorksSection />
-
-          {/* 4. Earnings Hub */}
+          {/* 3. Earnings Hub */}
           <EarningsSection />
         </>
       ) : (

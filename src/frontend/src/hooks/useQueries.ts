@@ -105,6 +105,7 @@ export function useDeposit() {
     }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (actor as any).createDepositRequest(
         amount,
         paymentMethod,
@@ -128,6 +129,7 @@ export function useWithdraw() {
       extraNotes,
     }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       return (actor as any).requestWithdrawal(
         amount,

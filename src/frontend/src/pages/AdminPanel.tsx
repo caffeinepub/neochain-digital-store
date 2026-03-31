@@ -170,7 +170,8 @@ function TxDetailModal({
   }
 
   const isDeposit = parsedNotes?.type === "deposit";
-  const isWithdrawal = parsedNotes?.type === "withdrawal";
+  const isWithdrawal =
+    parsedNotes?.type === "withdrawal" || String(tx.txType) === "withdrawal";
 
   return (
     <div
@@ -268,24 +269,28 @@ function TxDetailModal({
           )}
 
           {/* Withdrawal-specific fields */}
-          {isWithdrawal && parsedNotes && (
+          {isWithdrawal && (
             <>
-              {parsedNotes.name && (
+              <DetailRow
+                label="Payment Method"
+                value={parsedNotes?.method || tx.paymentMethod || "—"}
+              />
+              {parsedNotes?.name && (
                 <DetailRow
                   label="Account Holder Name"
                   value={parsedNotes.name}
                 />
               )}
-              {parsedNotes.id && (
+              {parsedNotes?.id && (
                 <DetailRow
-                  label={getWithdrawIdLabel(parsedNotes.method ?? "")}
+                  label={getWithdrawIdLabel(parsedNotes?.method ?? "")}
                   value={parsedNotes.id}
                 />
               )}
-              {parsedNotes.ifsc && (
+              {parsedNotes?.ifsc && (
                 <DetailRow label="IFSC Code" value={parsedNotes.ifsc} />
               )}
-              {parsedNotes.branch && (
+              {parsedNotes?.branch && (
                 <DetailRow label="Branch Name" value={parsedNotes.branch} />
               )}
             </>
