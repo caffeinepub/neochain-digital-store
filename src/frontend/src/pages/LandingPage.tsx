@@ -728,6 +728,82 @@ export default function LandingPage() {
       {identity ? (
         // ===== LOGGED-IN LAYOUT =====
         <>
+          {/* Made by Sandeep Kumar branding */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 6,
+              marginBottom: 16,
+              paddingTop: 8,
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
+            >
+              {/* Left glow ray */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: -38,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 30,
+                  height: 4,
+                  background: "rgba(38,214,255,0.7)",
+                  borderRadius: 2,
+                  filter: "blur(3px)",
+                }}
+              />
+              <img
+                src="/assets/generated/sandeep-logo-transparent.dim_80x80.png"
+                alt="Sandeep Kumar"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  filter:
+                    "drop-shadow(0 0 8px rgba(38,214,255,0.8)) drop-shadow(0 0 16px rgba(123,77,255,0.5))",
+                }}
+              />
+              {/* Right glow ray */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: -38,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  width: 30,
+                  height: 4,
+                  background: "rgba(38,214,255,0.7)",
+                  borderRadius: 2,
+                  filter: "blur(3px)",
+                }}
+              />
+            </div>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                background:
+                  "linear-gradient(90deg, rgba(38,214,255,1), #fff, rgba(38,214,255,1))",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                filter: "drop-shadow(0 0 6px rgba(38,214,255,0.6))",
+              }}
+            >
+              Made by Sandeep Kumar
+            </span>
+          </div>
+
           {/* 1. My Dashboard (top) */}
           <section className="pt-8">
             <MyDashboardSection />

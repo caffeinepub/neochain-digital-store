@@ -114,10 +114,19 @@ export default function PaymentModal({ product, onClose }: Props) {
       setSuccess(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("Unauthorized") || msg.includes("not registered")) {
-        toast.error("Session expired. Please refresh the page and try again.");
+      if (
+        msg.includes("not registered") ||
+        msg.includes("User is not registered")
+      ) {
+        toast.error(
+          "Please login and complete registration before buying a plan.",
+        );
+      } else if (msg.includes("Unauthorized")) {
+        toast.error("Session expired. Please refresh and login again.");
+      } else if (msg.includes("Not connected")) {
+        toast.error("Please login first to buy a plan.");
       } else {
-        toast.error("Submission failed. Please try again.");
+        toast.error(`Submission failed: ${msg.slice(0, 80)}`);
       }
     }
   };

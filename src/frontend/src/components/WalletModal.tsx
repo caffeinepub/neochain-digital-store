@@ -176,6 +176,7 @@ export default function WalletModal({
         ifsc: ifsc || "",
         branch: branch || "",
         bank: isBankMethod(method) ? method : "",
+        amount: amount,
       });
       await withdraw.mutateAsync({
         amount: amountBig,
@@ -201,11 +202,13 @@ export default function WalletModal({
           "Please complete your profile registration first before withdrawing.",
         );
       } else if (msg.includes("Unauthorized")) {
-        toast.error("Session expired. Please refresh the page and try again.");
+        toast.error("Session expired. Please refresh and login again.");
+      } else if (msg.includes("Not connected")) {
+        toast.error("Please login first to withdraw.");
+      } else if (msg.includes("not registered")) {
+        toast.error("Please complete registration before withdrawing.");
       } else {
-        toast.error(
-          "Withdrawal failed. Please refresh the page and try again.",
-        );
+        toast.error(`Withdrawal failed: ${msg.slice(0, 80)}`);
       }
     }
   };

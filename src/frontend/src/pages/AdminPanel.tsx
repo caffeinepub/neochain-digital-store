@@ -54,7 +54,8 @@ type AdminTab =
   | "withdrawals"
   | "payments"
   | "ads"
-  | "support";
+  | "support"
+  | "health";
 
 interface AdTask {
   id: string;
@@ -246,7 +247,19 @@ function TxDetailModal({
               {(parsedNotes.txId || parsedNotes.txnId) && (
                 <DetailRow
                   label="Transaction ID (User)"
-                  value={parsedNotes.txId || parsedNotes.txnId || "—"}
+                  value={parsedNotes.txnId || parsedNotes.txId || "—"}
+                />
+              )}
+              {parsedNotes.paymentMethod && (
+                <DetailRow
+                  label="Payment Method Used"
+                  value={parsedNotes.paymentMethod}
+                />
+              )}
+              {parsedNotes.amount && (
+                <DetailRow
+                  label="Plan Amount"
+                  value={`₹${Number(parsedNotes.amount).toLocaleString("en-IN")}`}
                 />
               )}
               {/* Screenshot */}
@@ -277,6 +290,19 @@ function TxDetailModal({
           {/* Withdrawal-specific fields */}
           {isWithdrawal && (
             <>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  color: "rgba(38,214,255,0.9)",
+                  marginTop: 16,
+                  marginBottom: 4,
+                }}
+              >
+                Withdrawal Account Details
+              </p>
               <DetailRow
                 label="Payment Method"
                 value={parsedNotes?.method || tx.paymentMethod || "—"}
@@ -301,6 +327,12 @@ function TxDetailModal({
               )}
               {parsedNotes?.bank && (
                 <DetailRow label="Bank Name" value={parsedNotes.bank} />
+              )}
+              {parsedNotes?.amount && (
+                <DetailRow
+                  label="Requested Amount"
+                  value={`₹${Number(parsedNotes.amount).toLocaleString("en-IN")}`}
+                />
               )}
             </>
           )}
@@ -1011,7 +1043,7 @@ function TxTable({
 }
 
 function SupportTicketsTab() {
-  const { data: tickets, isLoading } = useAllSupportTickets();
+  const { data: tickets, isLoading, refetch } = useAllSupportTickets();
   const replyToTicket = useReplyToTicket();
   const resolveTicket = useResolveTicket();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -1076,6 +1108,19 @@ function SupportTicketsTab() {
         >
           {sortedTickets.length} total
         </span>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="ml-auto text-xs px-3 py-1.5 rounded-lg transition-colors"
+          style={{
+            background: "rgba(123,77,255,0.15)",
+            border: "1px solid rgba(123,77,255,0.35)",
+            color: "oklch(0.75 0.2 280)",
+          }}
+          data-ocid="support.button"
+        >
+          &#x21bb; Refresh
+        </button>
       </div>
 
       {sortedTickets.length === 0 ? (
@@ -1290,6 +1335,40 @@ function SupportTicketsTab() {
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
+  const [errorLog, setErrorLog] = useState<
+    Array<{ time: string; msg: string; file: string; line: number }>
+  >([]);
+
+  useEffect(() => {
+    const handler = (event: ErrorEvent) => {
+      setErrorLog((prev) => [
+        ...prev,
+        {
+          time: new Date().toISOString(),
+          msg: event.message,
+          file: event.filename || "unknown",
+          line: event.lineno,
+        },
+      ]);
+    };
+    const rejHandler = (event: PromiseRejectionEvent) => {
+      setErrorLog((prev) => [
+        ...prev,
+        {
+          time: new Date().toISOString(),
+          msg: String(event.reason),
+          file: "Promise",
+          line: 0,
+        },
+      ]);
+    };
+    window.addEventListener("error", handler);
+    window.addEventListener("unhandledrejection", rejHandler);
+    return () => {
+      window.removeEventListener("error", handler);
+      window.removeEventListener("unhandledrejection", rejHandler);
+    };
+  }, []);
 
   const { data: stats } = usePlatformStats();
   const { data: users, isLoading: usersLoading } = useAllUsers();
@@ -1316,6 +1395,7 @@ export default function AdminPanel() {
     { id: "payments", label: "QR Payments", icon: CreditCard },
     { id: "ads", label: "Ads Tasks", icon: Target },
     { id: "support", label: "Support Tickets", icon: MessageCircle },
+    { id: "health", label: "System Health", icon: Activity },
   ];
 
   const handleApprove = async (id: bigint) => {
@@ -1733,6 +1813,133 @@ export default function AdminPanel() {
       {/* Ads Tasks Tab */}
       {activeTab === "ads" && <AdsTasksTab />}
       {activeTab === "support" && <SupportTicketsTab />}
+      {activeTab === "health" && (
+        <div style={{ padding: "0 8px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 20,
+            }}
+          >
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: "rgba(38,214,255,1)",
+              }}
+            >
+              System Health Monitor
+            </h2>
+            <button
+              type="button"
+              onClick={() => setErrorLog([])}
+              style={{
+                background: "rgba(123,77,255,0.2)",
+                border: "1px solid rgba(123,77,255,0.5)",
+                color: "#fff",
+                borderRadius: 8,
+                padding: "6px 16px",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              Clear Log
+            </button>
+          </div>
+
+          {/* Status indicator */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "12px 16px",
+              borderRadius: 10,
+              marginBottom: 20,
+              background:
+                errorLog.length === 0
+                  ? "rgba(34,197,94,0.1)"
+                  : "rgba(239,68,68,0.1)",
+              border: `1px solid ${errorLog.length === 0 ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+            }}
+          >
+            <span style={{ fontSize: 20 }}>
+              {errorLog.length === 0 ? "✅" : "🔴"}
+            </span>
+            <span
+              style={{
+                fontWeight: 600,
+                color:
+                  errorLog.length === 0 ? "rgb(34,197,94)" : "rgb(239,68,68)",
+              }}
+            >
+              {errorLog.length === 0
+                ? "All Systems OK"
+                : `${errorLog.length} Error${errorLog.length > 1 ? "s" : ""} Detected`}
+            </span>
+          </div>
+
+          {/* Error list */}
+          {errorLog.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 0",
+                color: "rgba(255,255,255,0.5)",
+              }}
+            >
+              <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+              <p style={{ fontSize: 15 }}>
+                No errors detected. System is running smoothly.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {errorLog.map((e, i) => (
+                <div
+                  key={e.time + String(i)}
+                  style={{
+                    background: "rgba(239,68,68,0.05)",
+                    border: "1px solid rgba(239,68,68,0.2)",
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}
+                    >
+                      {new Date(e.time).toLocaleTimeString()}
+                    </span>
+                    <span
+                      style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}
+                    >
+                      {e.file}:{e.line}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "rgba(239,68,68,0.9)",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {e.msg}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Transaction Detail Modal */}
       {viewTx && (
