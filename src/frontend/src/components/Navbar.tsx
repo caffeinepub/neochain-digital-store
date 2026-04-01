@@ -1,8 +1,16 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Loader2, LogIn, LogOut, MoreVertical } from "lucide-react";
+import {
+  Loader2,
+  LogIn,
+  LogOut,
+  MoreVertical,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
+import ReferralModal from "./ReferralModal";
 import WalletModal from "./WalletModal";
 
 export default function Navbar() {
@@ -15,6 +23,7 @@ export default function Navbar() {
   const [walletDefaultTab, setWalletDefaultTab] = useState<
     "deposit" | "withdraw"
   >("deposit");
+  const [referralOpen, setReferralOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const openWallet = (tab: "deposit" | "withdraw" = "deposit") => {
@@ -46,11 +55,95 @@ export default function Navbar() {
         setDropdownOpen(false);
       }
     };
-    if (dropdownOpen) {
-      window.addEventListener("mousedown", handleClick);
-    }
+    if (dropdownOpen) window.addEventListener("mousedown", handleClick);
     return () => window.removeEventListener("mousedown", handleClick);
   }, [dropdownOpen]);
+
+  const dropdownItems = (
+    <>
+      {navLinks.map((link) => (
+        <Link
+          key={link.label}
+          to={link.to as "/" | "/dashboard"}
+          className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+          onClick={() => {
+            setDropdownOpen(false);
+            setMenuOpen(false);
+          }}
+          data-ocid="nav.link"
+        >
+          {link.label}
+        </Link>
+      ))}
+      <div style={{ borderTop: "1px solid rgba(123,77,255,0.15)" }} />
+      {/* Wallet */}
+      <button
+        type="button"
+        onClick={() => {
+          openWallet("deposit");
+          setDropdownOpen(false);
+          setMenuOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        data-ocid="nav.button"
+      >
+        <Wallet className="w-4 h-4 neon-text-cyan" />
+        Wallet
+      </button>
+      {/* View Plans */}
+      <button
+        type="button"
+        onClick={() => {
+          window.location.href = "/#plans";
+          setDropdownOpen(false);
+          setMenuOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        data-ocid="nav.link"
+      >
+        <span style={{ fontSize: 14 }}>📋</span>
+        View Plans
+      </button>
+      {/* Referral to Earn */}
+      <button
+        type="button"
+        onClick={() => {
+          setReferralOpen(true);
+          setDropdownOpen(false);
+          setMenuOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        data-ocid="referral.open_modal_button"
+      >
+        <TrendingUp
+          className="w-4 h-4"
+          style={{ color: "oklch(0.75 0.22 280)" }}
+        />
+        Referral to Earn
+      </button>
+      <div style={{ borderTop: "1px solid rgba(123,77,255,0.15)" }} />
+      {userProfile?.username && (
+        <div className="px-4 py-2 text-xs text-muted-foreground">
+          <span className="neon-text-cyan font-display font-semibold">
+            {userProfile.username}
+          </span>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          clear();
+          setDropdownOpen(false);
+          setMenuOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors"
+        data-ocid="nav.button"
+      >
+        <LogOut className="w-4 h-4" />
+        Logout
+      </button>
+    </>
+  );
 
   return (
     <>
@@ -137,7 +230,7 @@ export default function Navbar() {
                     <span className="text-xs font-semibold">Withdraw</span>
                   </button>
 
-                  {/* 3-dot dropdown menu (desktop) */}
+                  {/* 3-dot dropdown (desktop) */}
                   <div className="hidden md:block relative" ref={dropdownRef}>
                     <button
                       type="button"
@@ -151,55 +244,22 @@ export default function Navbar() {
 
                     {dropdownOpen && (
                       <div
-                        className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50"
+                        className="absolute right-0 top-full mt-2 w-52 rounded-xl overflow-hidden z-50"
                         style={{
-                          background: "rgba(7, 8, 26, 0.95)",
+                          background: "rgba(7, 8, 26, 0.97)",
                           border: "1px solid rgba(123, 77, 255, 0.35)",
                           boxShadow:
                             "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(123,77,255,0.15)",
                         }}
                       >
-                        {navLinks.map((link) => (
-                          <Link
-                            key={link.label}
-                            to={link.to as "/" | "/dashboard"}
-                            className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
-                            onClick={() => setDropdownOpen(false)}
-                            data-ocid="nav.link"
-                          >
-                            {link.label}
-                          </Link>
-                        ))}
-                        <div
-                          style={{
-                            borderTop: "1px solid rgba(123,77,255,0.2)",
-                          }}
-                        />
-                        {userProfile?.username && (
-                          <div className="px-4 py-2 text-xs text-muted-foreground">
-                            <span className="neon-text-cyan font-display font-semibold">
-                              {userProfile.username}
-                            </span>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            clear();
-                            setDropdownOpen(false);
-                          }}
-                          className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors"
-                          data-ocid="nav.button"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Logout
-                        </button>
+                        {dropdownItems}
                       </div>
                     )}
                   </div>
                 </>
               )}
 
+              {/* Login / Sign Up button — always visible in header */}
               {!isLoggedIn && (
                 <button
                   type="button"
@@ -213,100 +273,50 @@ export default function Navbar() {
                   ) : (
                     <LogIn className="w-4 h-4" />
                   )}
-                  {isLoggingIn ? "Connecting..." : "Login"}
+                  {isLoggingIn ? "Connecting..." : "Login / Sign Up"}
                 </button>
               )}
 
-              {/* Mobile 3-dot / hamburger */}
-              <button
-                type="button"
-                className="md:hidden neon-btn p-2"
-                onClick={() => setMenuOpen(!menuOpen)}
-                data-ocid="nav.toggle"
-              >
-                <MoreVertical className="w-5 h-5" />
-              </button>
+              {/* Mobile hamburger */}
+              {isLoggedIn && (
+                <button
+                  type="button"
+                  className="md:hidden neon-btn p-2"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  data-ocid="nav.toggle"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Mobile Menu */}
-          {menuOpen && (
-            <nav className="md:hidden py-4 flex flex-col gap-3 border-t border-border/30">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  to={link.to as "/" | "/dashboard"}
-                  className={`nav-link text-base ${isActive(link.to) ? "active" : ""}`}
-                  onClick={() => setMenuOpen(false)}
-                  data-ocid="nav.link"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              {isLoggedIn && hasProfile && (
-                <>
-                  <div
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
-                    style={{
-                      background: "rgba(38, 214, 255, 0.08)",
-                      border: "1px solid rgba(38, 214, 255, 0.2)",
-                    }}
-                  >
-                    <span className="text-muted-foreground text-xs">
-                      Balance:
-                    </span>
-                    <span className="neon-text-cyan font-display font-bold">
-                      ₹{Number(balance).toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      openWallet("withdraw");
-                      setMenuOpen(false);
-                    }}
-                    className="neon-btn flex items-center gap-2 px-4 py-2 text-sm w-full"
-                    style={{
-                      borderColor: "rgba(201, 60, 255, 0.4)",
-                      color: "oklch(0.78 0.22 310)",
-                    }}
-                    data-ocid="withdraw.open_modal_button"
-                  >
-                    Withdraw
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      clear();
-                      setMenuOpen(false);
-                    }}
-                    className="neon-btn flex items-center gap-2 px-4 py-2 text-sm w-full text-red-400"
-                    data-ocid="nav.button"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
-                </>
-              )}
-              {!isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    login();
-                    setMenuOpen(false);
+          {/* Mobile Menu — only when logged in */}
+          {menuOpen && isLoggedIn && (
+            <nav
+              className="md:hidden py-4 flex flex-col gap-1 border-t border-border/30"
+              style={{
+                background: "rgba(7, 8, 26, 0.98)",
+              }}
+            >
+              {/* Balance (mobile) */}
+              {hasProfile && (
+                <div
+                  className="flex items-center gap-2 px-4 py-2.5 mx-1 rounded-lg text-sm mb-1"
+                  style={{
+                    background: "rgba(38, 214, 255, 0.08)",
+                    border: "1px solid rgba(38, 214, 255, 0.2)",
                   }}
-                  disabled={isLoggingIn}
-                  className="neon-btn-primary flex items-center gap-2 px-4 py-2 text-sm w-full"
-                  data-ocid="nav.button"
                 >
-                  {isLoggingIn ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <LogIn className="w-4 h-4" />
-                  )}
-                  {isLoggingIn ? "Connecting..." : "Login"}
-                </button>
+                  <span className="text-muted-foreground text-xs">
+                    Balance:
+                  </span>
+                  <span className="neon-text-cyan font-display font-bold">
+                    ₹{Number(balance).toLocaleString("en-IN")}
+                  </span>
+                </div>
               )}
+              {dropdownItems}
             </nav>
           )}
         </div>
@@ -318,6 +328,13 @@ export default function Navbar() {
         onClose={() => setWalletOpen(false)}
         userProfile={userProfile ?? null}
         defaultTab={walletDefaultTab}
+      />
+
+      {/* Referral Modal */}
+      <ReferralModal
+        open={referralOpen}
+        onClose={() => setReferralOpen(false)}
+        userProfile={userProfile ?? null}
       />
     </>
   );

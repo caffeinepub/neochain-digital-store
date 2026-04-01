@@ -47,6 +47,7 @@ function getCountdown(targetMs: number): string {
 
 // Spin wheel constants
 const SPIN_AMOUNTS = [10, 12, 15, 18, 20, 22, 25, 30];
+const SPIN_DURATION_MS = 3000;
 const SEGMENT_COLORS = [
   "#8b5cf6", // purple
   "#3b82f6", // blue
@@ -182,6 +183,17 @@ export default function EarningsSection() {
   const [spinAvailable, setSpinAvailable] = useState(false);
   const [nextSpinCountdown, setNextSpinCountdown] = useState("");
   const [spinDeg, setSpinDeg] = useState(0);
+  const [spinCount, setSpinCount] = useState(0);
+
+  // Load spin count on mount
+  useEffect(() => {
+    if (!principalText) return;
+    const count = Number.parseInt(
+      localStorage.getItem(`spinCount_${principalText}`) ?? "0",
+      10,
+    );
+    setSpinCount(count);
+  }, [principalText]);
 
   // Audio context ref (lazy init on first interaction)
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -220,71 +232,70 @@ export default function EarningsSection() {
   }, [principalText]);
 
   const handleSpin = async () => {
-    if (!spinAvailable || isSpinning || !userProfile || !actor) return;
-
-    // Resume AudioContext if suspended (required by browsers after user gesture)
-    const audioCtx = getAudioCtx();
-    if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume().catch(() => {});
+    if (!spinAvailable || isSpinning) return;
+    if (!userProfile) {
+      toast.error("Please log in to spin");
+      return;
     }
+    if (!actor) {
+      toast.error("Connection error. Please refresh.");
+      return;
+    }
+
+    const audioCtx = getAudioCtx();
+    if (audioCtx?.state === "suspended") audioCtx.resume().catch(() => {});
 
     setIsSpinning(true);
     setSpinResult(null);
 
-    // Determine winner BEFORE animation
-    const countKey = `spinCount_${principalText}`;
-    const lastSpinKey = `lastSpin_${principalText}`;
-    const currentCount =
-      Number.parseInt(localStorage.getItem(countKey) ?? "0", 10) + 1;
-    const isSeventhSpin = currentCount % 7 === 0;
-
-    // Pick a random winning segment (even for 7th spin, just override reward)
-    const winIndex = Math.floor(Math.random() * 8);
-    const reward = isSeventhSpin ? 50 : SPIN_AMOUNTS[winIndex];
-
-    // Calculate exact target rotation so pointer lands on winning segment center
-    // Pointer is at top. Segment i center is at (i * 45 + 22.5)° clockwise from top.
-    // After rotation of `totalDeg`, the segment under the pointer is originally at `totalDeg % 360`.
-    // We want totalDeg % 360 === winIndex * 45 + 22.5
-    const segCenter = winIndex * 45 + 22.5;
-    const currentMod = ((spinDeg % 360) + 360) % 360;
-    const offset = (((segCenter - currentMod) % 360) + 360) % 360;
-    const targetDeg = spinDeg + 1800 + offset; // 5 full rotations + precise stop
-
-    setSpinDeg(targetDeg);
-
-    // Start tick sounds
-    if (audioCtx) {
-      tickIntervalRef.current = setInterval(() => {
-        playTick(audioCtx);
-      }, 110);
-    }
-
-    // Wait for spin animation (3s transition + 0.2s buffer)
-    await new Promise((r) => setTimeout(r, 3200));
-
-    // Stop tick sounds
-    if (tickIntervalRef.current) {
-      clearInterval(tickIntervalRef.current);
-      tickIntervalRef.current = null;
-    }
-
-    // Credit reward
-    const updated = {
-      ...userProfile,
-      balance: userProfile.balance + BigInt(reward),
-    };
     try {
+      const countKey = `spinCount_${principalText}`;
+      const lastSpinKey = `lastSpin_${principalText}`;
+      const currentCount =
+        Number.parseInt(localStorage.getItem(countKey) ?? "0", 10) + 1;
+      const isSeventhSpin = currentCount % 7 === 0;
+
+      const winIndex = Math.floor(Math.random() * 8);
+      const reward = isSeventhSpin ? 50 : SPIN_AMOUNTS[winIndex];
+
+      const segCenter = winIndex * 45 + 22.5;
+      const currentMod = ((spinDeg % 360) + 360) % 360;
+      const offset = (((segCenter - currentMod) % 360) + 360) % 360;
+      const targetDeg = spinDeg + 1800 + offset;
+
+      setSpinDeg(targetDeg);
+
+      // Start tick sounds
+      if (audioCtx) {
+        tickIntervalRef.current = setInterval(() => playTick(audioCtx), 110);
+      }
+
+      await new Promise((r) => setTimeout(r, SPIN_DURATION_MS + 200));
+
+      // Stop tick sounds
+      if (tickIntervalRef.current) {
+        clearInterval(tickIntervalRef.current);
+        tickIntervalRef.current = null;
+      }
+
+      // Normalize spin degree to avoid huge numbers
+      setSpinDeg(targetDeg % 360);
+
+      // Credit reward
+      const updated = {
+        ...userProfile,
+        balance: userProfile.balance + BigInt(reward),
+      };
       await actor.saveCallerUserProfile(updated);
+
       localStorage.setItem(countKey, String(currentCount));
+      setSpinCount(currentCount);
       localStorage.setItem(lastSpinKey, String(Date.now()));
       qc.invalidateQueries({ queryKey: ["userProfile"] });
       setSpinResult(reward);
       setSpinAvailable(false);
 
-      // Play win jingle
       if (audioCtx) playWin(audioCtx);
-
       toast.success(
         isSeventhSpin
           ? `🏆 Lucky 7th Spin! You won ₹${reward}!`
@@ -292,9 +303,15 @@ export default function EarningsSection() {
         { duration: 4000 },
       );
     } catch {
+      // Clear tick interval if still running
+      if (tickIntervalRef.current) {
+        clearInterval(tickIntervalRef.current);
+        tickIntervalRef.current = null;
+      }
       toast.error("Spin failed. Try again.");
+    } finally {
+      setIsSpinning(false);
     }
-    setIsSpinning(false);
   };
 
   // --- Ads ---
@@ -563,18 +580,20 @@ export default function EarningsSection() {
                 }}
               />
 
-              {/* Rotating wheel div */}
+              {/* Rotating wheel div — visual only, no click handler */}
               <motion.div
                 animate={{ rotate: spinDeg }}
-                transition={{ duration: 3, ease: "easeOut" }}
+                transition={{
+                  duration: SPIN_DURATION_MS / 1000,
+                  ease: "easeOut",
+                }}
                 style={{
                   width: WHEEL_SIZE,
                   height: WHEEL_SIZE,
-                  cursor: spinAvailable && !isSpinning ? "pointer" : "default",
+                  cursor: "default",
                   borderRadius: "50%",
                   overflow: "hidden",
                 }}
-                onClick={handleSpin}
               >
                 <svg
                   width={WHEEL_SIZE}
@@ -673,39 +692,90 @@ export default function EarningsSection() {
             <AnimatePresence>
               {spinResult !== null && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                  initial={{ opacity: 0, scale: 0.6, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="text-center"
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="w-full text-center rounded-xl py-3 px-4"
+                  style={{
+                    background: "rgba(255, 193, 7, 0.1)",
+                    border: "1px solid rgba(255, 193, 7, 0.4)",
+                    boxShadow: "0 0 30px rgba(255, 193, 7, 0.2)",
+                  }}
                 >
+                  <div className="text-3xl mb-1">🎉</div>
                   <div
-                    className="font-display font-black text-3xl"
-                    style={{ color: "oklch(0.85 0.18 85)" }}
+                    className="font-display font-black text-4xl"
+                    style={{
+                      color: "oklch(0.9 0.22 85)",
+                      textShadow: "0 0 20px rgba(255, 193, 7, 0.8)",
+                    }}
                   >
                     +₹{spinResult}
                   </div>
-                  <div className="text-muted-foreground text-xs">
-                    Added to balance!
+                  <div className="text-muted-foreground text-xs mt-1">
+                    Credited to your balance!
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Spin count progress bar */}
+            {principalText && (
+              <div className="w-full">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+                  <span>
+                    Spin {spinCount % 7}/{7}
+                  </span>
+                  <span className="text-yellow-400 font-semibold">
+                    {7 - (spinCount % 7) === 0
+                      ? "🏆 Special spin today!"
+                      : `${7 - (spinCount % 7)} more → ₹50!`}
+                  </span>
+                </div>
+                <div
+                  className="w-full h-2 rounded-full overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.07)" }}
+                >
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, oklch(0.75 0.22 280), oklch(0.85 0.18 85))",
+                      boxShadow: "0 0 8px rgba(201,60,255,0.5)",
+                    }}
+                    animate={{ width: `${((spinCount % 7) / 7) * 100}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                </div>
+                <div
+                  className="text-center text-xs text-muted-foreground mt-1"
+                  style={{ color: "oklch(0.72 0.18 85)" }}
+                >
+                  Every 7th spin = ₹50 Special! 🌟
+                </div>
+              </div>
+            )}
 
             {spinAvailable ? (
               <button
                 type="button"
                 onClick={handleSpin}
                 disabled={isSpinning}
-                className="w-full py-2.5 rounded-xl font-display font-bold text-sm transition-all disabled:opacity-60"
+                className="w-full py-3.5 rounded-xl font-display font-black text-base transition-all disabled:opacity-60 spin-btn-pulse"
                 style={{
-                  background: "rgba(201, 60, 255, 0.15)",
-                  border: "1px solid rgba(201, 60, 255, 0.5)",
-                  boxShadow: "0 0 20px rgba(201, 60, 255, 0.25)",
-                  color: "oklch(0.82 0.22 310)",
+                  background: isSpinning
+                    ? "rgba(201, 60, 255, 0.15)"
+                    : "linear-gradient(135deg, rgba(201,60,255,0.35) 0%, rgba(123,77,255,0.4) 50%, rgba(38,214,255,0.25) 100%)",
+                  border: "1px solid rgba(201, 60, 255, 0.6)",
+                  boxShadow: isSpinning
+                    ? "none"
+                    : "0 0 30px rgba(201,60,255,0.4), 0 4px 15px rgba(123,77,255,0.3)",
+                  color: "oklch(0.95 0.12 310)",
+                  letterSpacing: "0.05em",
                 }}
                 data-ocid="earnings.button"
               >
-                {isSpinning ? "Spinning..." : "🎰 Spin Now!"}
+                {isSpinning ? "⏳ Spinning..." : "🎰 SPIN NOW!"}
               </button>
             ) : (
               <div
