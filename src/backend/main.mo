@@ -97,39 +97,45 @@ actor {
     referralEarnings : Nat;
   };
 
-  // STATE
+  // ──────────────────────────────────────────────
+  // STATE — in-memory mutable maps
+  // ──────────────────────────────────────────────
 
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
-  // Product plans (seeded)
   let productPlans = Map.empty<Nat, ProductPlan>();
-  let nextProductId = Nat.fromText("5");
-
-  // Transactions
   let transactions = Map.empty<Nat, Transaction>();
-  var nextTransactionId = 1;
-
-  // Referral codes (simple 8-char code -> owner principal)
   let referralCodes = Map.empty<Text, Principal>();
-
-  // Payment methods
   let paymentMethods = Map.empty<Text, PaymentMethod>();
-
-  // User profiles
   let userProfiles = Map.empty<Principal, UserProfile>();
-
-  // User referral earnings
   let userReferralEarnings = Map.empty<Principal, Nat>();
 
-  // Helper function to get next transaction id and increment
+  var nextTransactionId = 1;
+
+  // ──────────────────────────────────────────────
+  // STABLE STORAGE — survives canister upgrades
+  // ──────────────────────────────────────────────
+
+  stable var stableUserProfiles : [(Principal, UserProfile)] = [];
+  stable var stableTransactions : [(Nat, Transaction)] = [];
+  stable var stableReferralCodes : [(Text, Principal)] = [];
+  stable var stablePaymentMethods : [(Text, PaymentMethod)] = [];
+  stable var stableNextTransactionId : Nat = 1;
+  stable var stableAdminAssigned : Bool = false;
+  stable var stableUserRoles : [(Principal, AccessControl.UserRole)] = [];
+  stable var nextProductId : ?Nat = null; // kept for upgrade compatibility
+
+  // ──────────────────────────────────────────────
+  // HELPERS
+  // ──────────────────────────────────────────────
+
   func getNextTransactionId() : Nat {
     let id = nextTransactionId;
     nextTransactionId += 1;
     id;
   };
 
-  // Helper function to generate referral code
   func generateReferralCode(user : Principal) : Text {
     let userText = user.toText();
     let len = userText.size();
@@ -140,49 +146,87 @@ actor {
     };
   };
 
-  // INITIALIZATION
-
-  system func preupgrade() {
-    // Seed product plans
+  // Seed product plans (only when empty — safe to call on every start)
+  func seedProductPlans() {
+    if (productPlans.size() > 0) return;
     productPlans.add(
-      1, {
+      1,
+      {
         id = 1;
-        name = "Basic";
-        price = 29;
-        features = ["Core marketplace", "1 storefront", "Email support"];
-        description = "Best for individuals";
+        name = "Starter Pack";
+        price = 1500;
+        features = ["20% Referral Commission", "Instant Activation", "One-time Purchase", "Fast Approval"];
+        description = "Start your earning journey with a simple, beginner-friendly digital product. One-time purchase with fast approval.";
       },
     );
     productPlans.add(
-      2, {
+      2,
+      {
         id = 2;
-        name = "Standard";
-        price = 79;
-        features = ["Custom branding", "5 stores", "Payout tools"];
-        description = "Best for small businesses";
+        name = "Growth Pack";
+        price = 3000;
+        features = ["20% Referral Commission", "Instant Activation", "One-time Purchase", "Fast Approval"];
+        description = "Accelerate your income with higher referral returns. Secure system, instant activation after approval.";
       },
     );
     productPlans.add(
-      3, {
+      3,
+      {
         id = 3;
-        name = "Premium";
-        price = 149;
-        features = ["Premium support", "Advanced reports"];
-        description = "Best for growing businesses";
+        name = "Pro Pack";
+        price = 5000;
+        features = ["17% Referral Commission", "Instant Activation", "One-time Purchase", "Priority Approval"];
+        description = "Maximize your earning potential with premium referral benefits. Trusted by thousands of active earners.";
       },
     );
     productPlans.add(
-      4, {
+      4,
+      {
         id = 4;
-        name = "Enterprise";
-        price = 299;
-        features = ["Custom solutions", "Dedicated manager"];
-        description = "Custom for large orgs";
+        name = "Elite Pack";
+        price = 8000;
+        features = ["15% Referral Commission", "Instant Activation", "One-time Purchase", "VIP Support"];
+        description = "Top-tier plan for serious earners. Maximum commissions, priority approval, long-term earning potential.";
       },
     );
   };
 
+  // ──────────────────────────────────────────────
+  // UPGRADE HOOKS
+  // ──────────────────────────────────────────────
+
+  // Called BEFORE upgrade — snapshot all in-memory data to stable vars
+  system func preupgrade() {
+    stableUserProfiles := userProfiles.entries().toArray();
+    stableTransactions := transactions.entries().toArray();
+    stableReferralCodes := referralCodes.entries().toArray();
+    stablePaymentMethods := paymentMethods.entries().toArray();
+    stableNextTransactionId := nextTransactionId;
+    stableAdminAssigned := accessControlState.adminAssigned;
+    stableUserRoles := accessControlState.userRoles.entries().toArray();
+  };
+
+  // Called AFTER upgrade — restore all data from stable vars
+  system func postupgrade() {
+    for ((k, v) in stableUserProfiles.vals()) { userProfiles.add(k, v) };
+    for ((k, v) in stableTransactions.vals()) { transactions.add(k, v) };
+    for ((k, v) in stableReferralCodes.vals()) { referralCodes.add(k, v) };
+    for ((k, v) in stablePaymentMethods.vals()) { paymentMethods.add(k, v) };
+    nextTransactionId := stableNextTransactionId;
+    accessControlState.adminAssigned := stableAdminAssigned;
+    for ((k, v) in stableUserRoles.vals()) {
+      accessControlState.userRoles.add(k, v);
+    };
+    // Re-seed plans if they weren't in stable storage
+    seedProductPlans();
+  };
+
+  // Seed plans on first install (postupgrade doesn't run on fresh install)
+  let _initPlans = do { seedProductPlans() };
+
+  // ──────────────────────────────────────────────
   // PUBLIC FUNCTIONS
+  // ──────────────────────────────────────────────
 
   // User registration - requires user role
   public shared ({ caller }) func registerUser(username : Text, referralCode : ?Text) : async UserProfile {
@@ -202,7 +246,7 @@ actor {
 
     var referredBy : ?Principal = null;
     switch (referralCode) {
-      case (null) { };
+      case (null) {};
       case (?code) {
         if (code == "") {
           Runtime.trap("Referral code cannot be empty");
@@ -291,6 +335,26 @@ actor {
       Runtime.trap("Payment method cannot be empty");
     };
 
+    // Auto-create profile if user doesn't have one (prevents silent failure)
+    if (not userProfiles.containsKey(caller)) {
+      let autoCode = generateReferralCode(caller);
+      if (not referralCodes.containsKey(autoCode)) {
+        referralCodes.add(autoCode, caller);
+      };
+      userProfiles.add(
+        caller,
+        {
+          user = caller;
+          username = "User";
+          balance = 0;
+          referralCode = autoCode;
+          referredBy = null;
+          referralEarnings = 0;
+        },
+      );
+      userReferralEarnings.add(caller, 0);
+    };
+
     let transactionId = getNextTransactionId();
     let notes = if (extraNotes == "") "Deposit request created" else extraNotes;
     transactions.add(
@@ -323,13 +387,12 @@ actor {
     };
 
     switch (userProfiles.get(caller)) {
-      case (null) { Runtime.trap("User not found") };
+      case (null) { Runtime.trap("User profile not found. Please register first.") };
       case (?profile) {
-        if (profile.balance < amount) { 
-          Runtime.trap("Insufficient balance") 
+        if (profile.balance < amount) {
+          Runtime.trap("Insufficient balance");
         };
-        
-        // Deduct balance immediately on withdrawal request
+
         let updatedProfile = {
           user = profile.user;
           username = profile.username;
@@ -378,7 +441,6 @@ actor {
           Runtime.trap("Insufficient balance to purchase product");
         };
 
-        // Deduct balance
         let updatedProfile = {
           user = profile.user;
           username = profile.username;
@@ -389,7 +451,6 @@ actor {
         };
         userProfiles.add(caller, updatedProfile);
 
-        // Create purchase transaction
         let transactionId = getNextTransactionId();
         let notes = "Product purchase: " # product.name;
         transactions.add(
@@ -406,13 +467,12 @@ actor {
           },
         );
 
-        // Process referral bonus (10% to referrer)
         switch (profile.referredBy) {
-          case (null) { };
+          case (null) {};
           case (?referrer) {
-            let bonusAmount = product.price / 10; // 10% bonus
+            let bonusAmount = product.price / 10;
             switch (userProfiles.get(referrer)) {
-              case (null) { };
+              case (null) {};
               case (?referrerProfile) {
                 let updatedReferrerProfile = {
                   user = referrerProfile.user;
@@ -424,7 +484,6 @@ actor {
                 };
                 userProfiles.add(referrer, updatedReferrerProfile);
 
-                // Create referral bonus transaction
                 let bonusTransactionId = getNextTransactionId();
                 transactions.add(
                   bonusTransactionId,
@@ -468,16 +527,7 @@ actor {
     if (description == "") {
       Runtime.trap("Payment method description cannot be empty");
     };
-    if (paymentMethods.containsKey(name)) {
-      Runtime.trap("Payment method already exists");
-    };
-    paymentMethods.add(
-      name,
-      {
-        name;
-        description;
-      },
-    );
+    paymentMethods.add(name, { name; description });
   };
 
   // Remove payment method - admin only
@@ -526,7 +576,6 @@ actor {
           Runtime.trap("Transaction is not pending");
         };
 
-        // Update transaction status
         let updatedTx = {
           id = tx.id;
           user = tx.user;
@@ -539,10 +588,9 @@ actor {
         };
         transactions.add(transactionId, updatedTx);
 
-        // For deposits, update user balance
         if (tx.txType == #deposit) {
           switch (userProfiles.get(tx.user)) {
-            case (null) { };
+            case (null) {};
             case (?profile) {
               let updatedProfile = {
                 user = profile.user;
@@ -573,7 +621,6 @@ actor {
           Runtime.trap("Transaction is not pending");
         };
 
-        // Update transaction status
         let updatedTx = {
           id = tx.id;
           user = tx.user;
@@ -586,10 +633,9 @@ actor {
         };
         transactions.add(transactionId, updatedTx);
 
-        // For withdrawals, refund the balance
         if (tx.txType == #withdrawal) {
           switch (userProfiles.get(tx.user)) {
-            case (null) { };
+            case (null) {};
             case (?profile) {
               let updatedProfile = {
                 user = profile.user;
@@ -629,7 +675,7 @@ actor {
     };
   };
 
-  // Update user role - admin only (uses AccessControl.assignRole which has built-in admin guard)
+  // Update user role - admin only
   public shared ({ caller }) func updateUserRole(user : Principal, role : AccessControl.UserRole) : async () {
     AccessControl.assignRole(accessControlState, caller, user, role);
   };

@@ -188,12 +188,24 @@ export default function WalletModal({
       setWFields(EMPTY_WITHDRAW);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("not found") || msg.includes("User not found")) {
+      if (msg.includes("Insufficient balance")) {
+        toast.error(
+          "Insufficient balance. Please check your available balance.",
+        );
+      } else if (
+        msg.includes("not found") ||
+        msg.includes("User not found") ||
+        msg.includes("profile not found")
+      ) {
         toast.error(
           "Please complete your profile registration first before withdrawing.",
         );
+      } else if (msg.includes("Unauthorized")) {
+        toast.error("Session expired. Please refresh the page and try again.");
       } else {
-        toast.error("Withdrawal failed. Please try again.");
+        toast.error(
+          "Withdrawal failed. Please refresh the page and try again.",
+        );
       }
     }
   };

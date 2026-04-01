@@ -60,7 +60,7 @@ export default function PaymentModal({ product, onClose }: Props) {
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Build merged list — only use fallback when backendMethods is null/undefined (loading)
+  // Build merged list — standard methods always shown; QR codes merged from backend
   const methodSource: MethodInfo[] =
     backendMethods === null || backendMethods === undefined
       ? STANDARD_METHODS.map((n) => ({
@@ -68,13 +68,11 @@ export default function PaymentModal({ product, onClose }: Props) {
           qrBase64: null,
           enabled: true,
         }))
-      : backendMethods.length === 0
-        ? [] // admin disabled all methods
-        : STANDARD_METHODS.map((stdName) => {
-            const found = backendMethods.find((m) => m.name === stdName);
-            if (found) return parseMethod(found.name, found.description);
-            return { name: stdName, qrBase64: null, enabled: true };
-          });
+      : STANDARD_METHODS.map((stdName) => {
+          const found = backendMethods.find((m) => m.name === stdName);
+          if (found) return parseMethod(found.name, found.description);
+          return { name: stdName, qrBase64: null, enabled: true };
+        });
 
   const methods = methodSource.filter((m) => m.enabled);
 
@@ -114,8 +112,13 @@ export default function PaymentModal({ product, onClose }: Props) {
         extraNotes,
       });
       setSuccess(true);
-    } catch {
-      toast.error("Submission failed. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("Unauthorized") || msg.includes("not registered")) {
+        toast.error("Session expired. Please refresh the page and try again.");
+      } else {
+        toast.error("Submission failed. Please try again.");
+      }
     }
   };
 

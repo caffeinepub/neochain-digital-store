@@ -414,9 +414,16 @@ function QrMethodCard({
       const base64 = ev.target?.result as string;
       try {
         await handleUpdateMethod(methodName, { qrBase64: base64 });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error(`QR upload failed: ${msg}`);
       } finally {
         setUploading(false);
       }
+    };
+    reader.onerror = () => {
+      toast.error("Failed to read image file. Please try again.");
+      setUploading(false);
     };
     reader.readAsDataURL(file);
   };
