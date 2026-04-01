@@ -30,62 +30,63 @@ function RootLayout() {
   const isAdmin = location.pathname === "/admin";
 
   const [showRegister, setShowRegister] = useState(false);
+  const [signUpIntent, setSignUpIntent] = useState(false);
 
+  // Auto-show register modal after login if no profile exists
   useEffect(() => {
     if (!identity || !actor || isFetching) return;
     actor
       .getCallerUserProfile()
       .then((profile) => {
-        if (profile === null) setShowRegister(true);
+        if (profile === null) {
+          setShowRegister(true);
+        } else if (signUpIntent) {
+          // Already has profile, just clear intent
+          setSignUpIntent(false);
+        }
       })
       .catch(() => {});
-  }, [identity, actor, isFetching]);
+  }, [identity, actor, isFetching, signUpIntent]);
 
   useEffect(() => {
     if (loginStatus === "idle") {
       setShowRegister(false);
+      setSignUpIntent(false);
     }
   }, [loginStatus]);
 
   const handleRegistered = (_profile: UserProfile) => {
     setShowRegister(false);
+    setSignUpIntent(false);
+  };
+
+  const handleSignUpClick = () => {
+    setSignUpIntent(true);
+  };
+
+  const toastStyle = {
+    background: "rgba(10, 8, 30, 0.95)",
+    border: "1px solid rgba(123, 77, 255, 0.4)",
+    color: "oklch(0.96 0.01 280)",
   };
 
   if (isAdmin) {
     return (
       <div className="min-h-screen cyber-grid-bg">
         <Outlet />
-        <Toaster
-          theme="dark"
-          toastOptions={{
-            style: {
-              background: "rgba(10, 8, 30, 0.95)",
-              border: "1px solid rgba(123, 77, 255, 0.4)",
-              color: "oklch(0.96 0.01 280)",
-            },
-          }}
-        />
+        <Toaster theme="dark" toastOptions={{ style: toastStyle }} />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex flex-col cyber-grid-bg">
-      <Navbar />
+      <Navbar onSignUpClick={handleSignUpClick} />
       <main className="flex-1">
         <Outlet />
       </main>
       <Footer />
-      <Toaster
-        theme="dark"
-        toastOptions={{
-          style: {
-            background: "rgba(10, 8, 30, 0.95)",
-            border: "1px solid rgba(123, 77, 255, 0.4)",
-            color: "oklch(0.96 0.01 280)",
-          },
-        }}
-      />
+      <Toaster theme="dark" toastOptions={{ style: toastStyle }} />
       {showRegister && identity && actor && (
         <RegisterModal
           actor={actor}

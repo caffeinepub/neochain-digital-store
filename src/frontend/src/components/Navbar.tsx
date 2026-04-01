@@ -5,6 +5,7 @@ import {
   LogOut,
   MoreVertical,
   TrendingUp,
+  UserPlus,
   Wallet,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -14,7 +15,11 @@ import PaymentModal from "./PaymentModal";
 import ReferralModal from "./ReferralModal";
 import WalletModal from "./WalletModal";
 
-export default function Navbar() {
+interface NavbarProps {
+  onSignUpClick?: () => void;
+}
+
+export default function Navbar({ onSignUpClick }: NavbarProps) {
   const { identity, login, clear, isLoggingIn } = useInternetIdentity();
   const { data: userProfile } = useUserProfile();
   const location = useLocation();
@@ -29,9 +34,7 @@ export default function Navbar() {
   } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const openWallet = () => {
-    setWalletOpen(true);
-  };
+  const openWallet = () => setWalletOpen(true);
 
   const navLinks = [
     { label: "Store", to: "/" },
@@ -45,9 +48,7 @@ export default function Navbar() {
 
   const balance = userProfile?.balance ?? 0n;
   const isLoggedIn = !!identity;
-  const _hasProfile = !!userProfile;
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (
@@ -60,6 +61,11 @@ export default function Navbar() {
     if (dropdownOpen) window.addEventListener("mousedown", handleClick);
     return () => window.removeEventListener("mousedown", handleClick);
   }, [dropdownOpen]);
+
+  const handleSignUp = () => {
+    if (onSignUpClick) onSignUpClick();
+    login();
+  };
 
   const dropdownItems = (
     <>
@@ -83,7 +89,6 @@ export default function Navbar() {
         </Link>
       ))}
       <div style={{ borderTop: "1px solid rgba(123,77,255,0.15)" }} />
-      {/* Wallet */}
       <button
         type="button"
         onClick={() => {
@@ -93,10 +98,8 @@ export default function Navbar() {
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="nav.button"
       >
-        <Wallet className="w-4 h-4 neon-text-cyan" />
-        Wallet
+        <Wallet className="w-4 h-4 neon-text-cyan" /> Wallet
       </button>
-      {/* View Plans */}
       <button
         type="button"
         onClick={() => {
@@ -106,10 +109,8 @@ export default function Navbar() {
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="nav.link"
       >
-        <span style={{ fontSize: 14 }}>📋</span>
-        View Plans
+        <span style={{ fontSize: 14 }}>📋</span> View Plans
       </button>
-      {/* Buy Plan */}
       <button
         type="button"
         onClick={() => {
@@ -119,10 +120,8 @@ export default function Navbar() {
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="nav.link"
       >
-        <span style={{ fontSize: 14 }}>🛒</span>
-        Buy Plan
+        <span style={{ fontSize: 14 }}>🛒</span> Buy Plan
       </button>
-      {/* Referral to Earn */}
       <button
         type="button"
         onClick={() => {
@@ -135,7 +134,7 @@ export default function Navbar() {
         <TrendingUp
           className="w-4 h-4"
           style={{ color: "oklch(0.75 0.22 280)" }}
-        />
+        />{" "}
         Referral to Earn
       </button>
       <div style={{ borderTop: "1px solid rgba(123,77,255,0.15)" }} />
@@ -155,8 +154,7 @@ export default function Navbar() {
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors"
         data-ocid="nav.button"
       >
-        <LogOut className="w-4 h-4" />
-        Logout
+        <LogOut className="w-4 h-4" /> Logout
       </button>
     </>
   );
@@ -213,7 +211,7 @@ export default function Navbar() {
             <div className="flex items-center gap-1.5 sm:gap-2">
               {isLoggedIn && (
                 <>
-                  {/* Balance Badge — always visible next to 3-dot */}
+                  {/* Balance Badge */}
                   <div
                     className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-display font-bold"
                     style={{
@@ -234,7 +232,7 @@ export default function Navbar() {
                     </span>
                   </div>
 
-                  {/* Withdraw Button — desktop only */}
+                  {/* Withdraw Button desktop */}
                   <button
                     type="button"
                     onClick={() => openWallet()}
@@ -249,7 +247,7 @@ export default function Navbar() {
                     <span className="text-xs font-semibold">Withdraw</span>
                   </button>
 
-                  {/* 3-dot dropdown — unified for all screen sizes */}
+                  {/* 3-dot dropdown */}
                   <div className="relative" ref={dropdownRef}>
                     <button
                       type="button"
@@ -260,7 +258,6 @@ export default function Navbar() {
                     >
                       <MoreVertical className="w-5 h-5" />
                     </button>
-
                     {dropdownOpen && (
                       <div
                         className="absolute right-0 top-full mt-2 w-52 rounded-xl overflow-hidden z-50"
@@ -271,7 +268,6 @@ export default function Navbar() {
                             "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(123,77,255,0.15)",
                         }}
                       >
-                        {/* Balance in dropdown on mobile */}
                         <div
                           className="sm:hidden flex items-center gap-2 px-4 py-3 border-b"
                           style={{ borderColor: "rgba(123,77,255,0.15)" }}
@@ -283,7 +279,6 @@ export default function Navbar() {
                             ₹{Number(balance).toLocaleString("en-IN")}
                           </span>
                         </div>
-                        {/* Withdraw in dropdown on mobile */}
                         <button
                           type="button"
                           onClick={() => {
@@ -294,8 +289,7 @@ export default function Navbar() {
                           style={{ color: "oklch(0.78 0.22 310)" }}
                           data-ocid="withdraw.open_modal_button"
                         >
-                          <span>💸</span>
-                          Withdraw
+                          <span>💸</span> Withdraw
                         </button>
                         {dropdownItems}
                       </div>
@@ -304,29 +298,53 @@ export default function Navbar() {
                 </>
               )}
 
-              {/* Login / Sign Up button */}
+              {/* Login + Sign Up — shown when not logged in */}
               {!isLoggedIn && (
-                <button
-                  type="button"
-                  onClick={login}
-                  disabled={isLoggingIn}
-                  className="neon-btn-primary flex items-center gap-2 px-4 py-2 text-sm"
-                  data-ocid="nav.button"
-                >
-                  {isLoggingIn ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <LogIn className="w-4 h-4" />
-                  )}
-                  {isLoggingIn ? "Connecting..." : "Login / Sign Up"}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={login}
+                    disabled={isLoggingIn}
+                    className="neon-btn flex items-center gap-1.5 px-3 py-2"
+                    style={{
+                      borderColor: "rgba(38, 214, 255, 0.5)",
+                      color: "oklch(0.82 0.18 200)",
+                      boxShadow: "0 0 10px rgba(38, 214, 255, 0.12)",
+                    }}
+                    data-ocid="nav.login_button"
+                  >
+                    {isLoggingIn ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <LogIn className="w-3.5 h-3.5" />
+                    )}
+                    <span className="text-xs font-semibold">
+                      {isLoggingIn ? "..." : "Login"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSignUp}
+                    disabled={isLoggingIn}
+                    className="neon-btn-primary flex items-center gap-1.5 px-3 py-2"
+                    data-ocid="nav.signup_button"
+                  >
+                    {isLoggingIn ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <UserPlus className="w-3.5 h-3.5" />
+                    )}
+                    <span className="text-xs font-semibold">
+                      {isLoggingIn ? "..." : "Sign Up"}
+                    </span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
         </div>
       </header>
 
-      {/* Wallet Modal */}
       <WalletModal
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
@@ -336,8 +354,6 @@ export default function Navbar() {
           setPaymentProduct(plan);
         }}
       />
-
-      {/* Payment Modal (opened from wallet Buy Plan tab) */}
       {paymentProduct && (
         <PaymentModal
           product={{
@@ -350,8 +366,6 @@ export default function Navbar() {
           onClose={() => setPaymentProduct(null)}
         />
       )}
-
-      {/* Referral Modal */}
       <ReferralModal
         open={referralOpen}
         onClose={() => setReferralOpen(false)}
