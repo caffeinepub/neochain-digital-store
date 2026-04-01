@@ -1,6 +1,8 @@
 import {
   CalendarDays,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   ExternalLink,
   Loader2,
@@ -709,6 +711,332 @@ function HowItWorksSection() {
 }
 
 // ============================================================
+// SEO: PLATFORM INTRODUCTION SECTION
+// ============================================================
+function AboutSection() {
+  return (
+    <section id="about" className="px-4 pb-24">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="neon-card p-8 sm:p-12 text-center"
+        >
+          <div
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-6"
+            style={{
+              background: "rgba(38,214,255,0.1)",
+              border: "1px solid rgba(38,214,255,0.3)",
+              color: "oklch(0.82 0.18 210)",
+            }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Trusted Earning Platform
+          </div>
+          <h2 className="font-display font-black text-3xl sm:text-4xl mb-6 gradient-text">
+            Welcome to NeoChain Digital Store
+          </h2>
+          <p className="text-muted-foreground text-base sm:text-lg leading-relaxed mb-4 max-w-2xl mx-auto">
+            <strong className="text-foreground">NeoChain Digital Store</strong>{" "}
+            is India&apos;s fastest-growing digital earning platform where you
+            can earn money online through plans, referral commissions, and daily
+            rewards. Whether you are new to online earning or an experienced
+            user, the{" "}
+            <strong className="text-foreground">
+              NeoChain earning platform
+            </strong>{" "}
+            is designed to be simple, transparent, and highly rewarding.
+          </p>
+          <p className="text-muted-foreground text-base leading-relaxed max-w-2xl mx-auto">
+            With a quick{" "}
+            <strong className="text-foreground">NeoChain login</strong>, you get
+            instant access to your personal dashboard, referral link, and
+            Earnings Hub. Join thousands of users who{" "}
+            <strong className="text-foreground">
+              earn money online with NeoChain
+            </strong>{" "}
+            every single day through our proven, secure system.
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// SEO: HOW TO EARN SECTION
+// ============================================================
+function HowToEarnSection() {
+  const steps = [
+    {
+      num: "1",
+      title: "Create Account",
+      desc: "Register on NeoChain Digital Store with your email. NeoChain login is simple and takes under a minute to set up your profile.",
+      color: "cyan",
+      icon: "👤",
+    },
+    {
+      num: "2",
+      title: "Choose a Plan",
+      desc: "Pick from our affordable earning plans starting at ₹1500. Each plan on this NeoChain earning platform gives daily income potential with referral bonuses.",
+      color: "violet",
+      icon: "📋",
+    },
+    {
+      num: "3",
+      title: "Start Earning Daily Income",
+      desc: "Earn money online with NeoChain through referral commissions up to 20%, daily spin wheel rewards, and automatic login bonuses.",
+      color: "magenta",
+      icon: "💰",
+    },
+  ];
+
+  return (
+    <section id="how-to-earn" className="px-4 pb-24">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-14"
+        >
+          <h2 className="font-display font-black text-3xl sm:text-4xl mb-4 gradient-text">
+            How to Earn with NeoChain Digital Store
+          </h2>
+          <p className="text-muted-foreground max-w-lg mx-auto">
+            Follow these 3 simple steps to start earning daily income on the
+            NeoChain earning platform.
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {steps.map((step, i) => (
+            <motion.div
+              key={step.num}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.15 }}
+              className="neon-card p-6 text-center relative overflow-hidden"
+            >
+              {/* Big step number watermark */}
+              <div
+                className={`absolute -top-2 -right-2 font-display font-black text-8xl pointer-events-none select-none ${TEXT_CLASSES[step.color]}`}
+                style={{ opacity: 0.06 }}
+              >
+                {step.num}
+              </div>
+              <div className="text-4xl mb-4">{step.icon}</div>
+              <div
+                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-black mb-3 ${TEXT_CLASSES[step.color]}`}
+                style={{
+                  background:
+                    step.color === "cyan"
+                      ? "rgba(38,214,255,0.1)"
+                      : step.color === "violet"
+                        ? "rgba(123,77,255,0.1)"
+                        : "rgba(201,60,255,0.1)",
+                  border:
+                    step.color === "cyan"
+                      ? "1px solid rgba(38,214,255,0.3)"
+                      : step.color === "violet"
+                        ? "1px solid rgba(123,77,255,0.3)"
+                        : "1px solid rgba(201,60,255,0.3)",
+                }}
+              >
+                {step.num}
+              </div>
+              <h3
+                className={`font-display font-bold text-lg mb-3 ${TEXT_CLASSES[step.color]}`}
+              >
+                {step.title}
+              </h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {step.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// SEO: FAQ SECTION
+// ============================================================
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: "Is NeoChain Digital Store free to join?",
+      a: "Joining NeoChain Digital Store requires purchasing a plan starting from ₹1500. This one-time investment unlocks your referral link and daily earning features including the spin wheel and login bonus.",
+    },
+    {
+      q: "How do I earn on this platform?",
+      a: "You can earn money online with NeoChain in three ways: (1) Referral commission up to 20% when friends join using your unique referral link, (2) Daily spin wheel rewards — get 1 free spin every 24 hours, and (3) Daily login bonus credited automatically to your balance every time you log in.",
+    },
+    {
+      q: "How do I withdraw my earnings?",
+      a: "Go to Wallet → Withdraw from the navigation menu. Enter your bank or UPI details and the amount you wish to withdraw. A 12% processing fee is deducted. Payments are processed within 24–48 hours after admin approval. Minimum withdrawal limits apply.",
+    },
+  ];
+
+  return (
+    <section id="faq" className="px-4 pb-24">
+      <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          <h2 className="font-display font-black text-3xl sm:text-4xl mb-4 gradient-text">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-muted-foreground">
+            Everything you need to know about the NeoChain earning platform.
+          </p>
+        </motion.div>
+
+        <div className="space-y-4" data-ocid="faq.list">
+          {faqs.map((faq, i) => (
+            <motion.div
+              key={faq.q}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="neon-card overflow-hidden"
+              data-ocid={`faq.item.${i + 1}`}
+            >
+              <button
+                type="button"
+                className="w-full flex items-center justify-between gap-4 p-5 sm:p-6 text-left hover:bg-white/[0.02] transition-colors"
+                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                data-ocid={`faq.toggle.${i + 1}`}
+                aria-expanded={openIndex === i}
+              >
+                <span className="font-display font-semibold text-sm sm:text-base text-foreground">
+                  {faq.q}
+                </span>
+                <span className="shrink-0 neon-text-cyan">
+                  {openIndex === i ? (
+                    <ChevronUp className="w-5 h-5" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5" />
+                  )}
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {openIndex === i && (
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div
+                      className="px-5 sm:px-6 pb-5 text-muted-foreground text-sm leading-relaxed"
+                      style={{
+                        borderTop: "1px solid rgba(123,77,255,0.15)",
+                        paddingTop: "1rem",
+                      }}
+                    >
+                      {faq.a}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
+// SEO: CTA SECTION
+// ============================================================
+function CTASection({ onSignUp }: { onSignUp: () => void }) {
+  return (
+    <section className="px-4 pb-32">
+      <div className="max-w-3xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="relative rounded-3xl p-10 sm:p-16 text-center overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.12 0.06 280), oklch(0.09 0.03 260))",
+            border: "1px solid rgba(38,214,255,0.25)",
+            boxShadow:
+              "0 0 60px rgba(123,77,255,0.2), 0 4px 40px rgba(0,0,0,0.5)",
+          }}
+        >
+          {/* Glow orbs */}
+          <div
+            className="absolute top-0 left-1/4 w-64 h-64 rounded-full blur-[80px] opacity-20 pointer-events-none"
+            style={{ background: "oklch(0.52 0.22 280)" }}
+          />
+          <div
+            className="absolute bottom-0 right-1/4 w-48 h-48 rounded-full blur-[60px] opacity-15 pointer-events-none"
+            style={{ background: "oklch(0.82 0.18 210)" }}
+          />
+
+          <div className="relative z-10">
+            <div
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-6"
+              style={{
+                background: "rgba(52,211,153,0.1)",
+                border: "1px solid rgba(52,211,153,0.35)",
+                color: "rgb(52,211,153)",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              2,400+ Active Members
+            </div>
+
+            <h2 className="font-display font-black text-3xl sm:text-5xl mb-4 gradient-text">
+              Join NeoChain Digital Store Today
+            </h2>
+            <p className="text-muted-foreground text-base sm:text-lg mb-8 max-w-xl mx-auto leading-relaxed">
+              Start earning daily income on India&apos;s fast-growing{" "}
+              <strong className="text-foreground">
+                NeoChain earning platform
+              </strong>
+              . Referral commissions, spin rewards, and login bonuses — all in
+              one place.
+            </p>
+
+            <button
+              type="button"
+              onClick={onSignUp}
+              className="neon-btn-primary inline-flex items-center gap-2 px-10 py-4 text-base font-bold"
+              data-ocid="cta.primary_button"
+            >
+              Sign Up Now
+            </button>
+
+            <p className="text-muted-foreground text-xs mt-4">
+              Plans start at ₹1500 · No hidden fees · Fast approval
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
 // MAIN LANDING PAGE
 // ============================================================
 export default function LandingPage() {
@@ -861,13 +1189,28 @@ export default function LandingPage() {
                 every friend who joins and purchases a plan.
               </p>
 
-              <a
-                href="#plans"
-                className="neon-btn-primary inline-flex items-center gap-2 px-8 py-4 text-base font-semibold"
-                data-ocid="hero.primary_button"
-              >
-                View Plans
-              </a>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a
+                  href="#plans"
+                  className="neon-btn-primary inline-flex items-center gap-2 px-8 py-4 text-base font-semibold"
+                  data-ocid="hero.primary_button"
+                >
+                  View Plans
+                </a>
+                <button
+                  type="button"
+                  onClick={login}
+                  className="inline-flex items-center gap-2 px-8 py-4 text-base font-semibold rounded-xl transition-all"
+                  style={{
+                    background: "rgba(52,211,153,0.1)",
+                    border: "1px solid rgba(52,211,153,0.4)",
+                    color: "rgb(52,211,153)",
+                  }}
+                  data-ocid="hero.secondary_button"
+                >
+                  Join Now — Sign Up Free
+                </button>
+              </div>
             </motion.div>
 
             <motion.div
@@ -899,6 +1242,18 @@ export default function LandingPage() {
 
           {/* How It Works */}
           <HowItWorksSection />
+
+          {/* SEO: About / Platform Introduction */}
+          <AboutSection />
+
+          {/* SEO: How to Earn Steps */}
+          <HowToEarnSection />
+
+          {/* SEO: FAQ */}
+          <FAQSection />
+
+          {/* SEO: CTA */}
+          <CTASection onSignUp={login} />
         </>
       )}
 
