@@ -11,10 +11,9 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { TransactionStatus, TransactionType } from "../backend.d";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useAllTransactions, useUserProfile } from "../hooks/useQueries";
+import { useUserProfile } from "../hooks/useQueries";
 import RegisterModal from "./RegisterModal";
 
 interface AdTask {
@@ -131,18 +130,11 @@ function playWin(ctx: AudioContext) {
 
 export default function EarningsSection() {
   const { actor } = useActor();
-  const { data: userProfile } = useUserProfile();
-  const { data: transactions } = useAllTransactions();
+  const { data: userProfile, isLoading: isProfileLoading } = useUserProfile();
   const qc = useQueryClient();
   const { identity } = useInternetIdentity();
   const principalText = identity?.getPrincipal().toText() ?? "";
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
-
-  const hasApprovedPlan = (transactions ?? []).some(
-    (tx) =>
-      String(tx.txType) === TransactionType.purchase &&
-      String(tx.status) === TransactionStatus.approved,
-  );
 
   // --- Login bonus ---
   const [loginBonusClaimed, setLoginBonusClaimed] = useState(false);
@@ -237,6 +229,10 @@ export default function EarningsSection() {
     if (!spinAvailable || isSpinning) return;
     if (!identity) {
       toast.error("Please log in to spin");
+      return;
+    }
+    if (isProfileLoading) {
+      toast.info("Loading your profile, please wait...");
       return;
     }
     if (!userProfile) {
@@ -366,41 +362,6 @@ export default function EarningsSection() {
       toast.error("Claim failed. Try again.");
     }
   };
-
-  // Locked state
-  if (transactions !== undefined && !hasApprovedPlan) {
-    return (
-      <section className="px-4 pb-24">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center py-16" data-ocid="earnings.panel">
-            <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{
-                background: "rgba(123, 77, 255, 0.1)",
-                border: "1px solid rgba(123, 77, 255, 0.3)",
-              }}
-            >
-              <Trophy className="w-8 h-8 neon-text-violet" />
-            </div>
-            <h2 className="font-display font-black text-3xl gradient-text mb-3">
-              Earnings Hub Locked
-            </h2>
-            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
-              Purchase and get admin approval for any plan to unlock daily spin,
-              login bonus, and ad rewards.
-            </p>
-            <a
-              href="/#plans"
-              className="neon-btn-primary inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold"
-              data-ocid="earnings.primary_button"
-            >
-              View Plans
-            </a>
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="px-4 pb-24">

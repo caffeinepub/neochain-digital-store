@@ -169,7 +169,8 @@ function TxDetailModal({
     }
   }
 
-  const isDeposit = parsedNotes?.type === "deposit";
+  const isDepositOrPurchase =
+    parsedNotes?.type === "deposit" || parsedNotes?.type === "plan_purchase";
   const isWithdrawal =
     parsedNotes?.type === "withdrawal" || String(tx.txType) === "withdrawal";
 
@@ -231,16 +232,16 @@ function TxDetailModal({
             <StatusBadge status={String(tx.status)} />
           </div>
 
-          {/* Deposit-specific fields */}
-          {isDeposit && parsedNotes && (
+          {/* Deposit/Plan Purchase-specific fields */}
+          {isDepositOrPurchase && parsedNotes && (
             <>
               {parsedNotes.name && (
                 <DetailRow label="Name" value={parsedNotes.name} />
               )}
-              {parsedNotes.txId && (
+              {(parsedNotes.txId || parsedNotes.txnId) && (
                 <DetailRow
                   label="Transaction ID (User)"
-                  value={parsedNotes.txId}
+                  value={parsedNotes.txId || parsedNotes.txnId || "—"}
                 />
               )}
               {/* Screenshot */}
@@ -292,6 +293,9 @@ function TxDetailModal({
               )}
               {parsedNotes?.branch && (
                 <DetailRow label="Branch Name" value={parsedNotes.branch} />
+              )}
+              {parsedNotes?.bank && (
+                <DetailRow label="Bank Name" value={parsedNotes.bank} />
               )}
             </>
           )}
@@ -408,8 +412,11 @@ function QrMethodCard({
     const reader = new FileReader();
     reader.onload = async (ev) => {
       const base64 = ev.target?.result as string;
-      await handleUpdateMethod(methodName, { qrBase64: base64 });
-      setUploading(false);
+      try {
+        await handleUpdateMethod(methodName, { qrBase64: base64 });
+      } finally {
+        setUploading(false);
+      }
     };
     reader.readAsDataURL(file);
   };

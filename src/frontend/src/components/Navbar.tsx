@@ -63,6 +63,14 @@ export default function Navbar() {
 
   const dropdownItems = (
     <>
+      <Link
+        to="/"
+        className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        onClick={() => setDropdownOpen(false)}
+        data-ocid="nav.link"
+      >
+        🏠 Home
+      </Link>
       {navLinks.map((link) => (
         <Link
           key={link.label}
@@ -100,6 +108,19 @@ export default function Navbar() {
       >
         <span style={{ fontSize: 14 }}>📋</span>
         View Plans
+      </button>
+      {/* Buy Plan */}
+      <button
+        type="button"
+        onClick={() => {
+          window.location.href = "/#plans";
+          setDropdownOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        data-ocid="nav.link"
+      >
+        <span style={{ fontSize: 14 }}>🛒</span>
+        Buy Plan
       </button>
       {/* Referral to Earn */}
       <button

@@ -175,6 +175,7 @@ export default function WalletModal({
         id,
         ifsc: ifsc || "",
         branch: branch || "",
+        bank: isBankMethod(method) ? method : "",
       });
       await withdraw.mutateAsync({
         amount: amountBig,
@@ -185,8 +186,15 @@ export default function WalletModal({
         "Withdrawal request submitted! Admin will process it shortly.",
       );
       setWFields(EMPTY_WITHDRAW);
-    } catch {
-      toast.error("Withdrawal failed. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("not found") || msg.includes("User not found")) {
+        toast.error(
+          "Please complete your profile registration first before withdrawing.",
+        );
+      } else {
+        toast.error("Withdrawal failed. Please try again.");
+      }
     }
   };
 
