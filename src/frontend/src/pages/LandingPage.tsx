@@ -17,6 +17,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { TransactionStatus, TransactionType } from "../backend.d";
 import type { Transaction } from "../backend.d";
+import AdSenseUnit from "../components/AdSenseUnit";
 import EarningsSection from "../components/EarningsSection";
 import PaymentModal from "../components/PaymentModal";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -1142,6 +1143,8 @@ export default function LandingPage() {
 
           {/* 3. Earnings Hub */}
           <EarningsSection />
+          {/* AdSense Ad Unit */}
+          <AdSenseUnit />
         </>
       ) : (
         // ===== GUEST LAYOUT =====
@@ -1239,6 +1242,8 @@ export default function LandingPage() {
 
           {/* Plans */}
           <PlansSection onBuyNow={handleBuyNow} />
+          {/* AdSense Ad Unit */}
+          <AdSenseUnit />
 
           {/* How It Works */}
           <HowItWorksSection />
