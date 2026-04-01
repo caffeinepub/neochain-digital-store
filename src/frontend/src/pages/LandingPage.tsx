@@ -25,6 +25,7 @@ const PRODUCTS = [
     id: 1n,
     name: "Starter Pack",
     price: 1500n,
+    commission: 20,
     description:
       "Start your earning journey with a simple, beginner-friendly digital product. One-time purchase with fast approval.",
     color: "cyan",
@@ -33,6 +34,7 @@ const PRODUCTS = [
     id: 2n,
     name: "Growth Pack",
     price: 3000n,
+    commission: 20,
     description:
       "Accelerate your income with higher referral returns. Secure system, instant activation after approval.",
     color: "violet",
@@ -41,6 +43,7 @@ const PRODUCTS = [
     id: 3n,
     name: "Pro Pack",
     price: 5000n,
+    commission: 17,
     description:
       "Maximize your earning potential with premium referral benefits. Trusted by thousands of active earners.",
     color: "magenta",
@@ -49,6 +52,7 @@ const PRODUCTS = [
     id: 4n,
     name: "Elite Pack",
     price: 8000n,
+    commission: 15,
     description:
       "Top-tier plan for serious earners. Maximum commissions, priority approval, long-term earning potential.",
     color: "cyan",
@@ -543,7 +547,7 @@ function PlansSection({
       </motion.div>
 
       <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+        <div className="grid grid-cols-2 gap-6 justify-items-center">
           {PRODUCTS.map((product, i) => (
             <motion.div
               key={product.id.toString()}
@@ -552,7 +556,7 @@ function PlansSection({
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
               whileHover={{ y: -8 }}
-              className="relative w-72 max-w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
+              className="relative w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
               style={{
                 background:
                   "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
@@ -604,7 +608,7 @@ function PlansSection({
               >
                 🤝 Buy this product and share with your friends. When your
                 friend signs up and purchases any product, you will earn{" "}
-                <strong>20% commission</strong>.
+                <strong>{product.commission}% commission</strong>.
               </div>
               <ul className="space-y-1.5 mb-6 flex-1">
                 {[

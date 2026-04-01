@@ -17,7 +17,6 @@ export default function Navbar() {
   const { identity, login, clear, isLoggingIn } = useInternetIdentity();
   const { data: userProfile } = useUserProfile();
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletDefaultTab, setWalletDefaultTab] = useState<
@@ -43,7 +42,7 @@ export default function Navbar() {
 
   const balance = userProfile?.balance ?? 0n;
   const isLoggedIn = !!identity;
-  const hasProfile = !!userProfile;
+  const _hasProfile = !!userProfile;
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -66,10 +65,7 @@ export default function Navbar() {
           key={link.label}
           to={link.to as "/" | "/dashboard"}
           className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
-          onClick={() => {
-            setDropdownOpen(false);
-            setMenuOpen(false);
-          }}
+          onClick={() => setDropdownOpen(false)}
           data-ocid="nav.link"
         >
           {link.label}
@@ -82,7 +78,6 @@ export default function Navbar() {
         onClick={() => {
           openWallet("deposit");
           setDropdownOpen(false);
-          setMenuOpen(false);
         }}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="nav.button"
@@ -96,7 +91,6 @@ export default function Navbar() {
         onClick={() => {
           window.location.href = "/#plans";
           setDropdownOpen(false);
-          setMenuOpen(false);
         }}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="nav.link"
@@ -110,7 +104,6 @@ export default function Navbar() {
         onClick={() => {
           setReferralOpen(true);
           setDropdownOpen(false);
-          setMenuOpen(false);
         }}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
         data-ocid="referral.open_modal_button"
@@ -134,7 +127,6 @@ export default function Navbar() {
         onClick={() => {
           clear();
           setDropdownOpen(false);
-          setMenuOpen(false);
         }}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-400 hover:bg-white/5 transition-colors"
         data-ocid="nav.button"
@@ -194,28 +186,31 @@ export default function Navbar() {
             </nav>
 
             {/* Right Side */}
-            <div className="flex items-center gap-2">
-              {isLoggedIn && hasProfile && (
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {isLoggedIn && (
                 <>
-                  {/* Balance Badge */}
+                  {/* Balance Badge — always visible next to 3-dot */}
                   <div
-                    className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-display font-bold"
+                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-display font-bold"
                     style={{
                       background: "rgba(38, 214, 255, 0.1)",
                       border: "1px solid rgba(38, 214, 255, 0.3)",
-                      boxShadow: "0 0 12px rgba(38, 214, 255, 0.15)",
+                      boxShadow: "0 0 10px rgba(38, 214, 255, 0.12)",
                     }}
                     data-ocid="nav.panel"
                   >
-                    <span className="text-muted-foreground text-xs">
-                      Balance:
+                    <span
+                      className="text-muted-foreground"
+                      style={{ fontSize: 10 }}
+                    >
+                      ₹
                     </span>
                     <span className="neon-text-cyan">
-                      ₹{Number(balance).toLocaleString("en-IN")}
+                      {Number(balance).toLocaleString("en-IN")}
                     </span>
                   </div>
 
-                  {/* Withdraw Button */}
+                  {/* Withdraw Button — desktop only */}
                   <button
                     type="button"
                     onClick={() => openWallet("withdraw")}
@@ -230,8 +225,8 @@ export default function Navbar() {
                     <span className="text-xs font-semibold">Withdraw</span>
                   </button>
 
-                  {/* 3-dot dropdown (desktop) */}
-                  <div className="hidden md:block relative" ref={dropdownRef}>
+                  {/* 3-dot dropdown — unified for all screen sizes */}
+                  <div className="relative" ref={dropdownRef}>
                     <button
                       type="button"
                       onClick={() => setDropdownOpen((v) => !v)}
@@ -252,6 +247,32 @@ export default function Navbar() {
                             "0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(123,77,255,0.15)",
                         }}
                       >
+                        {/* Balance in dropdown on mobile */}
+                        <div
+                          className="sm:hidden flex items-center gap-2 px-4 py-3 border-b"
+                          style={{ borderColor: "rgba(123,77,255,0.15)" }}
+                        >
+                          <span className="text-muted-foreground text-xs">
+                            Balance:
+                          </span>
+                          <span className="neon-text-cyan font-display font-bold text-sm">
+                            ₹{Number(balance).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        {/* Withdraw in dropdown on mobile */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            openWallet("withdraw");
+                            setDropdownOpen(false);
+                          }}
+                          className="sm:hidden flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-white/5 transition-colors"
+                          style={{ color: "oklch(0.78 0.22 310)" }}
+                          data-ocid="withdraw.open_modal_button"
+                        >
+                          <span>💸</span>
+                          Withdraw
+                        </button>
                         {dropdownItems}
                       </div>
                     )}
@@ -259,7 +280,7 @@ export default function Navbar() {
                 </>
               )}
 
-              {/* Login / Sign Up button — always visible in header */}
+              {/* Login / Sign Up button */}
               {!isLoggedIn && (
                 <button
                   type="button"
@@ -276,49 +297,8 @@ export default function Navbar() {
                   {isLoggingIn ? "Connecting..." : "Login / Sign Up"}
                 </button>
               )}
-
-              {/* Mobile hamburger */}
-              {isLoggedIn && (
-                <button
-                  type="button"
-                  className="md:hidden neon-btn p-2"
-                  onClick={() => setMenuOpen(!menuOpen)}
-                  data-ocid="nav.toggle"
-                >
-                  <MoreVertical className="w-5 h-5" />
-                </button>
-              )}
             </div>
           </div>
-
-          {/* Mobile Menu — only when logged in */}
-          {menuOpen && isLoggedIn && (
-            <nav
-              className="md:hidden py-4 flex flex-col gap-1 border-t border-border/30"
-              style={{
-                background: "rgba(7, 8, 26, 0.98)",
-              }}
-            >
-              {/* Balance (mobile) */}
-              {hasProfile && (
-                <div
-                  className="flex items-center gap-2 px-4 py-2.5 mx-1 rounded-lg text-sm mb-1"
-                  style={{
-                    background: "rgba(38, 214, 255, 0.08)",
-                    border: "1px solid rgba(38, 214, 255, 0.2)",
-                  }}
-                >
-                  <span className="text-muted-foreground text-xs">
-                    Balance:
-                  </span>
-                  <span className="neon-text-cyan font-display font-bold">
-                    ₹{Number(balance).toLocaleString("en-IN")}
-                  </span>
-                </div>
-              )}
-              {dropdownItems}
-            </nav>
-          )}
         </div>
       </header>
 

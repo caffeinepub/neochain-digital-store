@@ -15,6 +15,7 @@ import { TransactionStatus, TransactionType } from "../backend.d";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useAllTransactions, useUserProfile } from "../hooks/useQueries";
+import RegisterModal from "./RegisterModal";
 
 interface AdTask {
   id: string;
@@ -134,7 +135,8 @@ export default function EarningsSection() {
   const { data: transactions } = useAllTransactions();
   const qc = useQueryClient();
   const { identity } = useInternetIdentity();
-  const principalText = identity?.getPrincipal().toString() ?? "";
+  const principalText = identity?.getPrincipal().toText() ?? "";
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
 
   const hasApprovedPlan = (transactions ?? []).some(
     (tx) =>
@@ -207,7 +209,7 @@ export default function EarningsSection() {
   };
 
   useEffect(() => {
-    if (!principalText) return;
+    if (!identity) return;
     const check = () => {
       const lastSpinKey = `lastSpin_${principalText}`;
       const lastSpin = localStorage.getItem(lastSpinKey);
@@ -229,12 +231,17 @@ export default function EarningsSection() {
     check();
     const interval = setInterval(check, 1000);
     return () => clearInterval(interval);
-  }, [principalText]);
+  }, [principalText, identity]);
 
   const handleSpin = async () => {
     if (!spinAvailable || isSpinning) return;
-    if (!userProfile) {
+    if (!identity) {
       toast.error("Please log in to spin");
+      return;
+    }
+    if (!userProfile) {
+      toast.error("Please register your account first to spin!");
+      setRegisterModalOpen(true);
       return;
     }
     if (!actor) {
@@ -1045,6 +1052,19 @@ export default function EarningsSection() {
           </motion.div>
         )}
       </div>
+
+      {/* Register Modal for unregistered users */}
+      {actor && registerModalOpen && (
+        <RegisterModal
+          actor={actor}
+          onRegistered={() => {
+            qc.invalidateQueries({ queryKey: ["userProfile"] });
+            setRegisterModalOpen(false);
+            toast.success("Account registered! You can now spin.");
+          }}
+          onClose={() => setRegisterModalOpen(false)}
+        />
+      )}
     </section>
   );
 }
