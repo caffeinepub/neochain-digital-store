@@ -1,35 +1,28 @@
-# NeoChain Digital Store
+# NeoChain Digital Earning
 
 ## Current State
-- Home screen has My Dashboard, Plans, How It Works, Deposit & Withdrawal sections
-- Navbar shows balance + wallet button for logged-in users
-- Admin panel manages transactions, payment methods, QR codes
-- No earnings/spin/bonus system exists
+Full-stack cyberpunk earning platform with plans, wallet, referral, admin panel, and earnings hub. Backend uses Motoko stable variables. Frontend is React/TypeScript with cyberpunk dark purple-blue theme.
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Earnings Section** on home screen (separate card/button to enter)
-- Inside Earnings section: Free Daily Spin, Daily Login Bonus, Ads Promotion
-- **Free Daily Spin**: 1 spin/day, resets after 24h, random ₹10-₹22; every 7th day spin gives ₹50 bonus
-- **Daily Login Bonus**: ₹5 auto-credited on first login of each day as "Welcome Bonus"
-- **Ads Promotion**: Admin creates ad tasks (image, link, reward amount, task description). User must complete task (click link). "Claim" button appears only after task completion. If incomplete, "Auto Complete Task" button shown. Admin can enable/disable tasks.
-- **Withdrawal fee 12%**: Show 12% fee deduction on withdrawal form
-- Backend: claimDailySpin, claimLoginBonus, createAdTask (admin), getAdTasks, completeAdTask, claimAdReward, getAdTaskProgress
+- **SupportTicket type** in backend: ticketId, userId (Principal), guestName, guestEmail, problemSummary, status (open/resolved), createdAt, adminReply, adminRepliedAt
+- **Backend functions**: createSupportTicket (public, no auth), getMyTickets (user), getAllSupportTickets (admin), replyToTicket (admin), resolveTicket (admin)
+- **Stable storage** for support tickets with preupgrade/postupgrade hooks updated
+- **CustomerSupportWidget component**: floating 💬 button at bottom-right corner of every page, opens a chat panel, smart rule-based AI bot responding in Hinglish, auto-creates support ticket if issue unresolved
+- **Support Tickets tab** in AdminPanel: shows all tickets with Ticket ID, User ID/Name, Problem Summary, Status (Open/Resolved), admin reply input, resolve button
 
 ### Modify
-- **Home screen**: Remove Deposit & Withdrawal section, replace with Earnings section button/card
-- **Navbar**: Add withdrawal button near balance (3-dots area, already has wallet button - add explicit "Withdraw" shortcut)
-- **Plan Buy**: Clicking Buy Now opens payment modal directly (already works, confirm no deposit step confusion)
-- **Wallet/Withdrawal modal**: Show 12% fee deduction preview
+- **App.tsx**: Mount `<CustomerSupportWidget />` inside RootLayout (outside admin route), so it appears on all non-admin pages
+- **AdminPanel.tsx**: Add "Support Tickets" tab to the tabs list
+- **backend main.mo**: Add SupportTicket type, stable vars, CRUD functions, update preupgrade/postupgrade hooks
 
 ### Remove
-- Deposit & Withdrawal section from home screen
+- Nothing removed
 
 ## Implementation Plan
-1. Regenerate backend with: claimDailySpin, claimLoginBonus, createAdTask, getAdTasks, completeAdTask, claimAdReward, getAdTaskProgress, deleteAdTask, toggleAdTask
-2. Update LandingPage: remove deposit/withdrawal section, add Earnings section card
-3. Create EarningsSection component: spin wheel UI, daily bonus UI, ads tasks list
-4. Update WalletModal: show 12% withdrawal fee deduction preview
-5. Update AdminPanel: add Ad Tasks management tab (create, edit, enable/disable, delete)
-6. Navbar: already has balance + wallet button; ensure withdrawal is accessible
+1. Add SupportTicket type and functions to main.mo, update stable storage hooks
+2. Regenerate backend bindings
+3. Create CustomerSupportWidget.tsx with floating chat UI and AI bot logic
+4. Add Support Tickets tab to AdminPanel.tsx
+5. Mount widget in App.tsx RootLayout

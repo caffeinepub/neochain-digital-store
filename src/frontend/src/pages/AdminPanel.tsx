@@ -4,6 +4,7 @@ import {
   CreditCard,
   Eye,
   Loader2,
+  MessageCircle,
   Plus,
   ShieldCheck,
   Target,
@@ -21,6 +22,7 @@ import type { PaymentMethod, Transaction } from "../backend.d";
 import { Switch } from "../components/ui/switch";
 import {
   useAddPaymentMethod,
+  useAllSupportTickets,
   useAllTransactions,
   useAllUsers,
   useApproveTransaction,
@@ -28,6 +30,8 @@ import {
   usePlatformStats,
   useRejectTransaction,
   useRemovePaymentMethod,
+  useReplyToTicket,
+  useResolveTicket,
   useUpdateUserBalance,
   useUpdateUserRole,
 } from "../hooks/useQueries";
@@ -49,7 +53,8 @@ type AdminTab =
   | "deposits"
   | "withdrawals"
   | "payments"
-  | "ads";
+  | "ads"
+  | "support";
 
 interface AdTask {
   id: string;
@@ -1005,6 +1010,283 @@ function TxTable({
   );
 }
 
+function SupportTicketsTab() {
+  const { data: tickets, isLoading } = useAllSupportTickets();
+  const replyToTicket = useReplyToTicket();
+  const resolveTicket = useResolveTicket();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+
+  const handleReply = async (ticketId: bigint) => {
+    const key = String(ticketId);
+    const reply = replyInputs[key]?.trim();
+    if (!reply) return;
+    try {
+      await replyToTicket.mutateAsync({ ticketId, reply });
+      toast.success("Reply sent!");
+      setReplyInputs((prev) => ({ ...prev, [key]: "" }));
+    } catch {
+      toast.error("Failed to send reply");
+    }
+  };
+
+  const handleResolve = async (ticketId: bigint) => {
+    try {
+      await resolveTicket.mutateAsync(ticketId);
+      toast.success("Ticket resolved!");
+    } catch {
+      toast.error("Failed to resolve ticket");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2
+          className="w-8 h-8 animate-spin"
+          style={{ color: "oklch(0.75 0.2 280)" }}
+        />
+      </div>
+    );
+  }
+
+  const sortedTickets = [...(tickets || [])].sort(
+    (a, b) => Number(b.ticketId) - Number(a.ticketId),
+  );
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <div className="mb-4 flex items-center gap-2">
+        <MessageCircle
+          className="w-5 h-5"
+          style={{ color: "oklch(0.75 0.2 280)" }}
+        />
+        <h2
+          className="text-lg font-bold"
+          style={{ color: "oklch(0.96 0.01 280)" }}
+        >
+          Support Tickets
+        </h2>
+        <span
+          className="text-sm px-2 py-0.5 rounded-full"
+          style={{
+            background: "rgba(123,77,255,0.2)",
+            color: "oklch(0.75 0.2 280)",
+          }}
+        >
+          {sortedTickets.length} total
+        </span>
+      </div>
+
+      {sortedTickets.length === 0 ? (
+        <div
+          className="text-center py-16"
+          style={{ color: "oklch(0.5 0.05 280)" }}
+          data-ocid="support.empty_state"
+        >
+          <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>Koi support ticket nahi mila</p>
+        </div>
+      ) : (
+        <div className="space-y-3" data-ocid="support.list">
+          {sortedTickets.map((ticket, idx) => {
+            const key = String(ticket.ticketId);
+            const isExpanded = expandedId === key;
+            const isResolved = ticket.status === "resolved";
+            const createdDate = new Date(
+              Number(ticket.createdAt) / 1_000_000,
+            ).toLocaleDateString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            });
+            return (
+              <div
+                key={key}
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(123,77,255,0.2)",
+                }}
+                data-ocid={`support.item.${idx + 1}`}
+              >
+                {/* Row */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5 transition-colors text-left"
+                  onClick={() => setExpandedId(isExpanded ? null : key)}
+                >
+                  <span
+                    className="text-xs font-mono font-bold w-16 shrink-0"
+                    style={{ color: "oklch(0.75 0.2 280)" }}
+                  >
+                    #{key}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-sm font-medium truncate"
+                      style={{ color: "oklch(0.9 0.05 280)" }}
+                    >
+                      {ticket.guestName || "Anonymous"}
+                    </p>
+                    <p
+                      className="text-xs truncate"
+                      style={{ color: "oklch(0.55 0.05 280)" }}
+                    >
+                      {ticket.problemSummary}
+                    </p>
+                  </div>
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-full shrink-0 font-medium"
+                    style={{
+                      background: isResolved
+                        ? "rgba(0,200,100,0.15)"
+                        : "rgba(255,180,0,0.15)",
+                      color: isResolved
+                        ? "oklch(0.75 0.15 150)"
+                        : "oklch(0.85 0.15 80)",
+                    }}
+                  >
+                    {isResolved ? "Resolved" : "Open"}
+                  </span>
+                  <span
+                    className="text-xs shrink-0"
+                    style={{ color: "oklch(0.5 0.05 280)" }}
+                  >
+                    {createdDate}
+                  </span>
+                </button>
+
+                {/* Expanded */}
+                {isExpanded && (
+                  <div
+                    className="px-4 pb-4 space-y-3"
+                    style={{ borderTop: "1px solid rgba(123,77,255,0.1)" }}
+                  >
+                    <div className="pt-3">
+                      <p
+                        className="text-xs font-semibold mb-1"
+                        style={{ color: "oklch(0.6 0.1 280)" }}
+                      >
+                        User Info
+                      </p>
+                      <p
+                        className="text-sm"
+                        style={{ color: "oklch(0.85 0.05 280)" }}
+                      >
+                        Name: {ticket.guestName || "—"}{" "}
+                        {ticket.guestEmail
+                          ? `| Email: ${ticket.guestEmail}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div>
+                      <p
+                        className="text-xs font-semibold mb-1"
+                        style={{ color: "oklch(0.6 0.1 280)" }}
+                      >
+                        Problem Summary
+                      </p>
+                      <p
+                        className="text-sm leading-relaxed"
+                        style={{ color: "oklch(0.85 0.05 280)" }}
+                      >
+                        {ticket.problemSummary}
+                      </p>
+                    </div>
+                    {ticket.adminReply && (
+                      <div
+                        className="p-2 rounded-lg"
+                        style={{
+                          background: "rgba(0,210,255,0.05)",
+                          border: "1px solid rgba(0,210,255,0.2)",
+                        }}
+                      >
+                        <p
+                          className="text-xs font-semibold mb-1"
+                          style={{ color: "oklch(0.75 0.15 200)" }}
+                        >
+                          Admin Reply
+                        </p>
+                        <p
+                          className="text-sm"
+                          style={{ color: "oklch(0.85 0.1 200)" }}
+                        >
+                          {ticket.adminReply}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p
+                        className="text-xs font-semibold mb-1"
+                        style={{ color: "oklch(0.6 0.1 280)" }}
+                      >
+                        Reply to User
+                      </p>
+                      <textarea
+                        value={replyInputs[key] || ""}
+                        onChange={(e) =>
+                          setReplyInputs((prev) => ({
+                            ...prev,
+                            [key]: e.target.value,
+                          }))
+                        }
+                        placeholder="Admin reply likhein..."
+                        rows={2}
+                        className="w-full text-sm px-3 py-2 rounded-lg outline-none resize-none"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(123,77,255,0.3)",
+                          color: "oklch(0.9 0.05 280)",
+                        }}
+                        data-ocid={"support.textarea"}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleReply(ticket.ticketId)}
+                        disabled={
+                          !replyInputs[key]?.trim() || replyToTicket.isPending
+                        }
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40"
+                        style={{
+                          background: "rgba(123,77,255,0.3)",
+                          color: "oklch(0.96 0.01 280)",
+                          border: "1px solid rgba(123,77,255,0.4)",
+                        }}
+                        data-ocid={"support.save_button"}
+                      >
+                        {replyToTicket.isPending ? "Sending..." : "Send Reply"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleResolve(ticket.ticketId)}
+                        disabled={isResolved || resolveTicket.isPending}
+                        className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-40"
+                        style={{
+                          background: isResolved
+                            ? "rgba(0,200,100,0.1)"
+                            : "rgba(0,200,100,0.25)",
+                          color: "oklch(0.75 0.15 150)",
+                          border: "1px solid rgba(0,200,100,0.3)",
+                        }}
+                        data-ocid={"support.confirm_button"}
+                      >
+                        {isResolved ? "✓ Resolved" : "Mark Resolved"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
@@ -1033,6 +1315,7 @@ export default function AdminPanel() {
     { id: "withdrawals", label: "Withdrawals", icon: Activity },
     { id: "payments", label: "QR Payments", icon: CreditCard },
     { id: "ads", label: "Ads Tasks", icon: Target },
+    { id: "support", label: "Support Tickets", icon: MessageCircle },
   ];
 
   const handleApprove = async (id: bigint) => {
@@ -1449,6 +1732,7 @@ export default function AdminPanel() {
 
       {/* Ads Tasks Tab */}
       {activeTab === "ads" && <AdsTasksTab />}
+      {activeTab === "support" && <SupportTicketsTab />}
 
       {/* Transaction Detail Modal */}
       {viewTx && (

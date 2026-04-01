@@ -236,3 +236,70 @@ export function useRemovePaymentMethod() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["paymentMethods"] }),
   });
 }
+
+export function useAllSupportTickets() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["allSupportTickets"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllSupportTickets();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useMyTickets() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["myTickets"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getMyTickets();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useCreateSupportTicket() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      guestName,
+      guestEmail,
+      problemSummary,
+    }: { guestName: string; guestEmail: string; problemSummary: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.createSupportTicket(guestName, guestEmail, problemSummary);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myTickets"] }),
+  });
+}
+
+export function useReplyToTicket() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      ticketId,
+      reply,
+    }: { ticketId: bigint; reply: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.replyToTicket(ticketId, reply);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allSupportTickets"] }),
+  });
+}
+
+export function useResolveTicket() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ticketId: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.resolveTicket(ticketId);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allSupportTickets"] }),
+  });
+}

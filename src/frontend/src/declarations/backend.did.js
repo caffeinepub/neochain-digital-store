@@ -24,13 +24,28 @@ export const ProductPlan = IDL.Record({
   'description' : IDL.Text,
   'price' : IDL.Nat,
 });
+export const TicketStatus = IDL.Variant({
+  'resolved' : IDL.Null,
+  'open' : IDL.Null,
+});
+export const Time = IDL.Int;
+export const SupportTicket = IDL.Record({
+  'status' : TicketStatus,
+  'problemSummary' : IDL.Text,
+  'adminReply' : IDL.Text,
+  'userId' : IDL.Opt(IDL.Principal),
+  'createdAt' : Time,
+  'guestName' : IDL.Text,
+  'guestEmail' : IDL.Text,
+  'ticketId' : IDL.Nat,
+  'adminRepliedAt' : IDL.Opt(Time),
+});
 export const TransactionStatus = IDL.Variant({
   'pending' : IDL.Null,
   'completed' : IDL.Null,
   'approved' : IDL.Null,
   'rejected' : IDL.Null,
 });
-export const Time = IDL.Int;
 export const TransactionType = IDL.Variant({
   'deposit' : IDL.Null,
   'withdrawal' : IDL.Null,
@@ -61,13 +76,24 @@ export const idlService = IDL.Service({
   'addPaymentMethod' : IDL.Func([PaymentMethod], [], []),
   'approveTransaction' : IDL.Func([IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'createDepositRequest' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Nat], []),
+  'createDepositRequest' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
+  'createSupportTicket' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
   'getAllPaymentMethods' : IDL.Func([], [IDL.Vec(PaymentMethod)], ['query']),
   'getAllProductPlans' : IDL.Func([], [IDL.Vec(ProductPlan)], ['query']),
+  'getAllSupportTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
   'getAllTransactions' : IDL.Func([], [IDL.Vec(Transaction)], ['query']),
   'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getMyTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
   'getPlatformStats' : IDL.Func(
       [],
       [IDL.Record({ 'totalUsers' : IDL.Nat, 'totalTransactions' : IDL.Nat })],
@@ -84,7 +110,9 @@ export const idlService = IDL.Service({
   'registerUser' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [UserProfile], []),
   'rejectTransaction' : IDL.Func([IDL.Nat], [], []),
   'removePaymentMethod' : IDL.Func([IDL.Text], [], []),
-  'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Nat], []),
+  'replyToTicket' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+  'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [IDL.Nat], []),
+  'resolveTicket' : IDL.Func([IDL.Nat], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'updateUserBalance' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
   'updateUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -109,13 +137,28 @@ export const idlFactory = ({ IDL }) => {
     'description' : IDL.Text,
     'price' : IDL.Nat,
   });
+  const TicketStatus = IDL.Variant({
+    'resolved' : IDL.Null,
+    'open' : IDL.Null,
+  });
+  const Time = IDL.Int;
+  const SupportTicket = IDL.Record({
+    'status' : TicketStatus,
+    'problemSummary' : IDL.Text,
+    'adminReply' : IDL.Text,
+    'userId' : IDL.Opt(IDL.Principal),
+    'createdAt' : Time,
+    'guestName' : IDL.Text,
+    'guestEmail' : IDL.Text,
+    'ticketId' : IDL.Nat,
+    'adminRepliedAt' : IDL.Opt(Time),
+  });
   const TransactionStatus = IDL.Variant({
     'pending' : IDL.Null,
     'completed' : IDL.Null,
     'approved' : IDL.Null,
     'rejected' : IDL.Null,
   });
-  const Time = IDL.Int;
   const TransactionType = IDL.Variant({
     'deposit' : IDL.Null,
     'withdrawal' : IDL.Null,
@@ -146,13 +189,24 @@ export const idlFactory = ({ IDL }) => {
     'addPaymentMethod' : IDL.Func([PaymentMethod], [], []),
     'approveTransaction' : IDL.Func([IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'createDepositRequest' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Nat], []),
+    'createDepositRequest' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
+    'createSupportTicket' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
     'getAllPaymentMethods' : IDL.Func([], [IDL.Vec(PaymentMethod)], ['query']),
     'getAllProductPlans' : IDL.Func([], [IDL.Vec(ProductPlan)], ['query']),
+    'getAllSupportTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
     'getAllTransactions' : IDL.Func([], [IDL.Vec(Transaction)], ['query']),
     'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getMyTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
     'getPlatformStats' : IDL.Func(
         [],
         [IDL.Record({ 'totalUsers' : IDL.Nat, 'totalTransactions' : IDL.Nat })],
@@ -169,7 +223,13 @@ export const idlFactory = ({ IDL }) => {
     'registerUser' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [UserProfile], []),
     'rejectTransaction' : IDL.Func([IDL.Nat], [], []),
     'removePaymentMethod' : IDL.Func([IDL.Text], [], []),
-    'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Nat], []),
+    'replyToTicket' : IDL.Func([IDL.Nat, IDL.Text], [], []),
+    'requestWithdrawal' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
+    'resolveTicket' : IDL.Func([IDL.Nat], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'updateUserBalance' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
     'updateUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),

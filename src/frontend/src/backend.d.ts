@@ -7,6 +7,28 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface Transaction {
+    id: bigint;
+    status: TransactionStatus;
+    paymentMethod: string;
+    createdAt: Time;
+    user: Principal;
+    notes: string;
+    txType: TransactionType;
+    amount: bigint;
+}
+export interface SupportTicket {
+    status: TicketStatus;
+    problemSummary: string;
+    adminReply: string;
+    userId?: Principal;
+    createdAt: Time;
+    guestName: string;
+    guestEmail: string;
+    ticketId: bigint;
+    adminRepliedAt?: Time;
+}
+export type Time = bigint;
 export interface ProductPlan {
     id: bigint;
     features: Array<string>;
@@ -14,7 +36,6 @@ export interface ProductPlan {
     description: string;
     price: bigint;
 }
-export type Time = bigint;
 export interface PaymentMethod {
     name: string;
     description: string;
@@ -27,15 +48,9 @@ export interface UserProfile {
     referralEarnings: bigint;
     referredBy?: Principal;
 }
-export interface Transaction {
-    id: bigint;
-    status: TransactionStatus;
-    paymentMethod: string;
-    createdAt: Time;
-    user: Principal;
-    notes: string;
-    txType: TransactionType;
-    amount: bigint;
+export enum TicketStatus {
+    resolved = "resolved",
+    open = "open"
 }
 export enum TransactionStatus {
     pending = "pending",
@@ -59,12 +74,15 @@ export interface backendInterface {
     approveTransaction(transactionId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createDepositRequest(amount: bigint, paymentMethod: string, extraNotes: string): Promise<bigint>;
+    createSupportTicket(guestName: string, guestEmail: string, problemSummary: string): Promise<bigint>;
     getAllPaymentMethods(): Promise<Array<PaymentMethod>>;
     getAllProductPlans(): Promise<Array<ProductPlan>>;
+    getAllSupportTickets(): Promise<Array<SupportTicket>>;
     getAllTransactions(): Promise<Array<Transaction>>;
     getAllUsers(): Promise<Array<UserProfile>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getMyTickets(): Promise<Array<SupportTicket>>;
     getPlatformStats(): Promise<{
         totalUsers: bigint;
         totalTransactions: bigint;
@@ -76,7 +94,9 @@ export interface backendInterface {
     registerUser(username: string, referralCode: string | null): Promise<UserProfile>;
     rejectTransaction(transactionId: bigint): Promise<void>;
     removePaymentMethod(name: string): Promise<void>;
+    replyToTicket(ticketId: bigint, reply: string): Promise<void>;
     requestWithdrawal(amount: bigint, paymentMethod: string, extraNotes: string): Promise<bigint>;
+    resolveTicket(ticketId: bigint): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateUserBalance(user: Principal, newBalance: bigint): Promise<void>;
     updateUserRole(user: Principal, role: UserRole): Promise<void>;

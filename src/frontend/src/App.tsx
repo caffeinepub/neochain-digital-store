@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { UserProfile } from "./backend.d";
+import CustomerSupportWidget from "./components/CustomerSupportWidget";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
 import RegisterModal from "./components/RegisterModal";
@@ -86,6 +87,7 @@ function RootLayout() {
         <Outlet />
       </main>
       <Footer />
+      <CustomerSupportWidget />
       <Toaster theme="dark" toastOptions={{ style: toastStyle }} />
       {showRegister && identity && actor && (
         <RegisterModal

@@ -18,6 +18,19 @@ export interface ProductPlan {
   'description' : string,
   'price' : bigint,
 }
+export interface SupportTicket {
+  'status' : TicketStatus,
+  'problemSummary' : string,
+  'adminReply' : string,
+  'userId' : [] | [Principal],
+  'createdAt' : Time,
+  'guestName' : string,
+  'guestEmail' : string,
+  'ticketId' : bigint,
+  'adminRepliedAt' : [] | [Time],
+}
+export type TicketStatus = { 'resolved' : null } |
+  { 'open' : null };
 export type Time = bigint;
 export interface Transaction {
   'id' : bigint,
@@ -54,12 +67,15 @@ export interface _SERVICE {
   'approveTransaction' : ActorMethod<[bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'createDepositRequest' : ActorMethod<[bigint, string, string], bigint>,
+  'createSupportTicket' : ActorMethod<[string, string, string], bigint>,
   'getAllPaymentMethods' : ActorMethod<[], Array<PaymentMethod>>,
   'getAllProductPlans' : ActorMethod<[], Array<ProductPlan>>,
+  'getAllSupportTickets' : ActorMethod<[], Array<SupportTicket>>,
   'getAllTransactions' : ActorMethod<[], Array<Transaction>>,
   'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getMyTickets' : ActorMethod<[], Array<SupportTicket>>,
   'getPlatformStats' : ActorMethod<
     [],
     { 'totalUsers' : bigint, 'totalTransactions' : bigint }
@@ -71,7 +87,9 @@ export interface _SERVICE {
   'registerUser' : ActorMethod<[string, [] | [string]], UserProfile>,
   'rejectTransaction' : ActorMethod<[bigint], undefined>,
   'removePaymentMethod' : ActorMethod<[string], undefined>,
+  'replyToTicket' : ActorMethod<[bigint, string], undefined>,
   'requestWithdrawal' : ActorMethod<[bigint, string, string], bigint>,
+  'resolveTicket' : ActorMethod<[bigint], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'updateUserBalance' : ActorMethod<[Principal, bigint], undefined>,
   'updateUserRole' : ActorMethod<[Principal, UserRole], undefined>,
