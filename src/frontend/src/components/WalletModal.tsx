@@ -5,25 +5,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowDownLeft, ArrowUpRight, Loader2, Wallet } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowUpRight, Loader2, ShoppingCart, Wallet } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile } from "../backend.d";
-import {
-  useDeposit,
-  usePaymentMethods,
-  useWithdraw,
-} from "../hooks/useQueries";
-
-const PAYMENT_METHODS_DEFAULT = [
-  "eSewa",
-  "Khalti",
-  "Paytm",
-  "PhonePe",
-  "Google Pay",
-  "USD Payment",
-  "Bybit Pay",
-];
+import { useWithdraw } from "../hooks/useQueries";
 
 const WITHDRAW_METHODS = [
   "eSewa",
@@ -35,11 +21,29 @@ const WITHDRAW_METHODS = [
   "HDFC Bank",
 ];
 
+const PLANS = [
+  { id: 1n, name: "Starter Pack", price: 1500n, commission: 20, color: "cyan" },
+  {
+    id: 2n,
+    name: "Growth Pack",
+    price: 3000n,
+    commission: 20,
+    color: "violet",
+  },
+  { id: 3n, name: "Pro Pack", price: 5000n, commission: 17, color: "magenta" },
+  { id: 4n, name: "Elite Pack", price: 8000n, commission: 15, color: "cyan" },
+];
+
 interface WalletModalProps {
   open: boolean;
   onClose: () => void;
   userProfile: UserProfile | null;
-  defaultTab?: "deposit" | "withdraw";
+  onBuyPlan: (plan: {
+    id: bigint;
+    name: string;
+    price: bigint;
+    commission: number;
+  }) => void;
 }
 
 function FieldLabel({
@@ -98,85 +102,47 @@ function getIdLabel(method: string): string {
   }
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.readAsDataURL(file);
-  });
+function getPlanColor(color: string) {
+  switch (color) {
+    case "violet":
+      return {
+        border: "rgba(123, 77, 255, 0.5)",
+        glow: "rgba(123, 77, 255, 0.2)",
+        text: "oklch(0.72 0.26 290)",
+        bg: "rgba(123, 77, 255, 0.08)",
+      };
+    case "magenta":
+      return {
+        border: "rgba(201, 60, 255, 0.5)",
+        glow: "rgba(201, 60, 255, 0.2)",
+        text: "oklch(0.72 0.28 315)",
+        bg: "rgba(201, 60, 255, 0.08)",
+      };
+    default: // cyan
+      return {
+        border: "rgba(38, 214, 255, 0.5)",
+        glow: "rgba(38, 214, 255, 0.2)",
+        text: "oklch(0.82 0.18 210)",
+        bg: "rgba(38, 214, 255, 0.08)",
+      };
+  }
 }
 
 export default function WalletModal({
   open,
   onClose,
   userProfile,
-  defaultTab = "deposit",
+  onBuyPlan,
 }: WalletModalProps) {
-  const deposit = useDeposit();
   const withdraw = useWithdraw();
-  const { data: paymentMethodsData } = usePaymentMethods();
 
-  // FIX 8: Controlled tabs that sync when defaultTab prop changes
-  const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">(
-    defaultTab,
-  );
-  useEffect(() => {
-    setActiveTab(defaultTab);
-  }, [defaultTab]);
-
-  // FIX 10: Only use fallback when loading (null/undefined), not when empty array
-  const paymentMethods =
-    paymentMethodsData == null
-      ? PAYMENT_METHODS_DEFAULT
-      : paymentMethodsData.length === 0
-        ? []
-        : paymentMethodsData.map((m) => m.name);
-
-  // Deposit state
-  const [dName, setDName] = useState("");
-  const [dTxId, setDTxId] = useState("");
-  const [dAmount, setDAmount] = useState("");
-  const [dMethod, setDMethod] = useState("");
-  const [dScreenshot, setDScreenshot] = useState<File | null>(null);
+  const [activeTab, setActiveTab] = useState<"withdraw" | "plans">("withdraw");
 
   // Withdraw state
   const [wFields, setWFields] = useState<WithdrawFields>(EMPTY_WITHDRAW);
 
   const setW = (key: keyof WithdrawFields, val: string) =>
     setWFields((prev) => ({ ...prev, [key]: val }));
-
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dTxId || !dAmount || !dMethod) {
-      toast.error("Transaction ID, Amount, and Payment Method are required");
-      return;
-    }
-    const amount = BigInt(Math.floor(Number.parseFloat(dAmount)));
-    if (amount <= 0n) {
-      toast.error("Invalid amount");
-      return;
-    }
-    try {
-      const screenshotBase64 = dScreenshot
-        ? await fileToBase64(dScreenshot)
-        : "";
-      const extraNotes = JSON.stringify({
-        type: "deposit",
-        name: dName,
-        txId: dTxId,
-        screenshot: screenshotBase64,
-      });
-      await deposit.mutateAsync({ amount, paymentMethod: dMethod, extraNotes });
-      toast.success("Deposit request submitted successfully!");
-      setDName("");
-      setDTxId("");
-      setDAmount("");
-      setDMethod("");
-      setDScreenshot(null);
-    } catch {
-      toast.error("Deposit failed. Please try again.");
-    }
-  };
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -273,7 +239,7 @@ export default function WalletModal({
         <div className="px-6 pb-6 pt-4 max-h-[75vh] overflow-y-auto">
           <Tabs
             value={activeTab}
-            onValueChange={(v) => setActiveTab(v as "deposit" | "withdraw")}
+            onValueChange={(v) => setActiveTab(v as "withdraw" | "plans")}
           >
             <TabsList
               className="grid grid-cols-2 w-full mb-6"
@@ -283,141 +249,20 @@ export default function WalletModal({
               }}
             >
               <TabsTrigger
-                value="deposit"
-                className="flex items-center gap-2"
-                data-ocid="wallet.tab"
-              >
-                <ArrowDownLeft className="w-4 h-4" /> Deposit
-              </TabsTrigger>
-              <TabsTrigger
                 value="withdraw"
                 className="flex items-center gap-2"
                 data-ocid="wallet.tab"
               >
                 <ArrowUpRight className="w-4 h-4" /> Withdraw
               </TabsTrigger>
+              <TabsTrigger
+                value="plans"
+                className="flex items-center gap-2"
+                data-ocid="wallet.tab"
+              >
+                <ShoppingCart className="w-4 h-4" /> Buy Plan
+              </TabsTrigger>
             </TabsList>
-
-            {/* DEPOSIT TAB */}
-            <TabsContent value="deposit">
-              <form onSubmit={handleDeposit} className="space-y-4">
-                <div>
-                  <FieldLabel htmlFor="w-d-name">Full Name</FieldLabel>
-                  <input
-                    id="w-d-name"
-                    type="text"
-                    className="neon-input w-full px-4 py-2.5 text-sm"
-                    placeholder="Your full name"
-                    value={dName}
-                    onChange={(e) => setDName(e.target.value)}
-                    data-ocid="deposit.input"
-                  />
-                </div>
-                <div>
-                  <FieldLabel htmlFor="w-d-txid">
-                    Transaction ID <span className="text-red-400">*</span>
-                  </FieldLabel>
-                  <input
-                    id="w-d-txid"
-                    type="text"
-                    required
-                    className="neon-input w-full px-4 py-2.5 text-sm"
-                    placeholder="e.g. TXN123456789"
-                    value={dTxId}
-                    onChange={(e) => setDTxId(e.target.value)}
-                    data-ocid="deposit.input"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <FieldLabel htmlFor="w-d-amount">
-                      Amount (₹) <span className="text-red-400">*</span>
-                    </FieldLabel>
-                    <input
-                      id="w-d-amount"
-                      type="number"
-                      required
-                      min="1"
-                      className="neon-input w-full px-4 py-2.5 text-sm"
-                      placeholder="Enter amount"
-                      value={dAmount}
-                      onChange={(e) => setDAmount(e.target.value)}
-                      data-ocid="deposit.input"
-                    />
-                  </div>
-                  <div>
-                    <FieldLabel htmlFor="w-d-method">
-                      Payment Method <span className="text-red-400">*</span>
-                    </FieldLabel>
-                    {paymentMethods.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-2.5">
-                        No payment methods available
-                      </p>
-                    ) : (
-                      <select
-                        id="w-d-method"
-                        required
-                        className="neon-input w-full px-4 py-2.5 text-sm"
-                        value={dMethod}
-                        onChange={(e) => setDMethod(e.target.value)}
-                        data-ocid="deposit.select"
-                      >
-                        <option value="">Select</option>
-                        {paymentMethods.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <FieldLabel htmlFor="w-d-screenshot">
-                    Payment Screenshot
-                  </FieldLabel>
-                  <label
-                    htmlFor="w-d-screenshot"
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    style={{
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px dashed rgba(123, 77, 255, 0.3)",
-                    }}
-                    data-ocid="deposit.upload_button"
-                  >
-                    <span>📎</span>
-                    {dScreenshot
-                      ? dScreenshot.name
-                      : "Upload screenshot (optional)"}
-                    <input
-                      id="w-d-screenshot"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        setDScreenshot(e.target.files?.[0] ?? null)
-                      }
-                    />
-                  </label>
-                </div>
-                <button
-                  type="submit"
-                  disabled={deposit.isPending}
-                  className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold mt-2"
-                  data-ocid="deposit.submit_button"
-                >
-                  {deposit.isPending ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" /> Processing...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowDownLeft className="w-4 h-4" /> Submit Deposit
-                    </>
-                  )}
-                </button>
-              </form>
-            </TabsContent>
 
             {/* WITHDRAW TAB */}
             <TabsContent value="withdraw">
@@ -466,6 +311,24 @@ export default function WalletModal({
                 {/* Step 2: Dynamic fields based on method */}
                 {wFields.method && (
                   <>
+                    {/* Name */}
+                    <div>
+                      <FieldLabel htmlFor="w-w-name">
+                        Account Holder Name{" "}
+                        <span className="text-red-400">*</span>
+                      </FieldLabel>
+                      <input
+                        id="w-w-name"
+                        type="text"
+                        required
+                        className="neon-input w-full px-4 py-2.5 text-sm"
+                        placeholder="Full name on account"
+                        value={wFields.name}
+                        onChange={(e) => setW("name", e.target.value)}
+                        data-ocid="withdraw.input"
+                      />
+                    </div>
+
                     {/* ID field */}
                     <div>
                       <FieldLabel htmlFor="w-w-id">
@@ -477,14 +340,14 @@ export default function WalletModal({
                         type="text"
                         required
                         className="neon-input w-full px-4 py-2.5 text-sm"
-                        placeholder={getIdLabel(wFields.method)}
+                        placeholder={`Enter your ${getIdLabel(wFields.method)}`}
                         value={wFields.id}
                         onChange={(e) => setW("id", e.target.value)}
                         data-ocid="withdraw.input"
                       />
                     </div>
 
-                    {/* IFSC + Branch for bank methods */}
+                    {/* Bank-only fields */}
                     {isBankMethod(wFields.method) && (
                       <>
                         <div>
@@ -511,7 +374,7 @@ export default function WalletModal({
                             type="text"
                             required
                             className="neon-input w-full px-4 py-2.5 text-sm"
-                            placeholder="e.g. Main Branch, Delhi"
+                            placeholder="e.g. Mumbai Main Branch"
                             value={wFields.branch}
                             onChange={(e) => setW("branch", e.target.value)}
                             data-ocid="withdraw.input"
@@ -519,26 +382,6 @@ export default function WalletModal({
                         </div>
                       </>
                     )}
-
-                    {/* Name — Account Holder Name for banks, Name for others */}
-                    <div>
-                      <FieldLabel htmlFor="w-w-name">
-                        {isBankMethod(wFields.method)
-                          ? "Account Holder Name"
-                          : "Name"}{" "}
-                        <span className="text-red-400">*</span>
-                      </FieldLabel>
-                      <input
-                        id="w-w-name"
-                        type="text"
-                        required
-                        className="neon-input w-full px-4 py-2.5 text-sm"
-                        placeholder="Your full name"
-                        value={wFields.name}
-                        onChange={(e) => setW("name", e.target.value)}
-                        data-ocid="withdraw.input"
-                      />
-                    </div>
 
                     {/* Amount */}
                     <div>
@@ -551,49 +394,22 @@ export default function WalletModal({
                         required
                         min="1"
                         className="neon-input w-full px-4 py-2.5 text-sm"
-                        placeholder="Enter amount to withdraw"
+                        placeholder="Enter amount"
                         value={wFields.amount}
                         onChange={(e) => setW("amount", e.target.value)}
                         data-ocid="withdraw.input"
                       />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        12% fee applies. Min withdrawal: ₹100
+                      </p>
                     </div>
-
-                    {/* Fee info */}
-                    {wFields.amount && Number(wFields.amount) > 0 && (
-                      <div
-                        className="p-3 rounded-xl text-xs space-y-1"
-                        style={{
-                          background: "rgba(201, 60, 255, 0.06)",
-                          border: "1px solid rgba(201, 60, 255, 0.2)",
-                        }}
-                      >
-                        <div className="flex justify-between text-muted-foreground">
-                          <span>Withdrawal Fee (12%)</span>
-                          <span className="text-red-400">
-                            -₹{(Number(wFields.amount) * 0.12).toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between font-bold">
-                          <span>You Receive</span>
-                          <span className="neon-text-cyan">
-                            ₹{(Number(wFields.amount) * 0.88).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
 
                 <button
                   type="submit"
                   disabled={withdraw.isPending || !wFields.method}
-                  className="w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
-                  style={{
-                    background: "rgba(201, 60, 255, 0.12)",
-                    border: "1px solid rgba(201, 60, 255, 0.5)",
-                    boxShadow: "0 0 20px rgba(201, 60, 255, 0.2)",
-                    color: "oklch(0.8 0.2 310)",
-                  }}
+                  className="neon-btn-primary w-full py-3 flex items-center justify-center gap-2 text-sm font-semibold mt-2"
                   data-ocid="withdraw.submit_button"
                 >
                   {withdraw.isPending ? (
@@ -607,6 +423,62 @@ export default function WalletModal({
                   )}
                 </button>
               </form>
+            </TabsContent>
+
+            {/* PLANS TAB */}
+            <TabsContent value="plans">
+              <div className="grid grid-cols-2 gap-3">
+                {PLANS.map((plan) => {
+                  const c = getPlanColor(plan.color);
+                  return (
+                    <div
+                      key={plan.id.toString()}
+                      className="rounded-xl p-3 flex flex-col gap-2"
+                      style={{
+                        background: c.bg,
+                        border: `1px solid ${c.border}`,
+                        boxShadow: `0 0 15px ${c.glow}`,
+                      }}
+                    >
+                      <div
+                        className="text-xs font-display font-black uppercase tracking-wider"
+                        style={{ color: c.text }}
+                      >
+                        {plan.name}
+                      </div>
+                      <div className="text-xl font-display font-black text-foreground">
+                        ₹{Number(plan.price).toLocaleString("en-IN")}
+                      </div>
+                      <div
+                        className="text-xs px-2 py-0.5 rounded-full text-center font-semibold w-fit"
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: `1px solid ${c.border}`,
+                          color: c.text,
+                        }}
+                      >
+                        {plan.commission}% Referral
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onBuyPlan(plan);
+                        }}
+                        className="mt-auto w-full py-2 rounded-lg text-xs font-display font-black uppercase tracking-wider transition-all hover:opacity-90"
+                        style={{
+                          background: `linear-gradient(135deg, ${c.border}, ${c.glow})`,
+                          border: `1px solid ${c.border}`,
+                          color: "#fff",
+                          boxShadow: `0 0 12px ${c.glow}`,
+                        }}
+                        data-ocid="plans.primary_button"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </TabsContent>
           </Tabs>
         </div>

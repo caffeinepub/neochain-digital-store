@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
+import PaymentModal from "./PaymentModal";
 import ReferralModal from "./ReferralModal";
 import WalletModal from "./WalletModal";
 
@@ -19,14 +20,16 @@ export default function Navbar() {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
-  const [walletDefaultTab, setWalletDefaultTab] = useState<
-    "deposit" | "withdraw"
-  >("deposit");
   const [referralOpen, setReferralOpen] = useState(false);
+  const [paymentProduct, setPaymentProduct] = useState<{
+    id: bigint;
+    name: string;
+    price: bigint;
+    commission: number;
+  } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const openWallet = (tab: "deposit" | "withdraw" = "deposit") => {
-    setWalletDefaultTab(tab);
+  const openWallet = () => {
     setWalletOpen(true);
   };
 
@@ -76,7 +79,7 @@ export default function Navbar() {
       <button
         type="button"
         onClick={() => {
-          openWallet("deposit");
+          openWallet();
           setDropdownOpen(false);
         }}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
@@ -213,7 +216,7 @@ export default function Navbar() {
                   {/* Withdraw Button — desktop only */}
                   <button
                     type="button"
-                    onClick={() => openWallet("withdraw")}
+                    onClick={() => openWallet()}
                     className="hidden sm:flex neon-btn items-center gap-1.5 px-3 py-2 text-sm"
                     style={{
                       borderColor: "rgba(201, 60, 255, 0.4)",
@@ -263,7 +266,7 @@ export default function Navbar() {
                         <button
                           type="button"
                           onClick={() => {
-                            openWallet("withdraw");
+                            openWallet();
                             setDropdownOpen(false);
                           }}
                           className="sm:hidden flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-white/5 transition-colors"
@@ -307,8 +310,25 @@ export default function Navbar() {
         open={walletOpen}
         onClose={() => setWalletOpen(false)}
         userProfile={userProfile ?? null}
-        defaultTab={walletDefaultTab}
+        onBuyPlan={(plan) => {
+          setWalletOpen(false);
+          setPaymentProduct(plan);
+        }}
       />
+
+      {/* Payment Modal (opened from wallet Buy Plan tab) */}
+      {paymentProduct && (
+        <PaymentModal
+          product={{
+            id: paymentProduct.id,
+            name: paymentProduct.name,
+            price: paymentProduct.price,
+            features: [],
+            description: "",
+          }}
+          onClose={() => setPaymentProduct(null)}
+        />
+      )}
 
       {/* Referral Modal */}
       <ReferralModal
