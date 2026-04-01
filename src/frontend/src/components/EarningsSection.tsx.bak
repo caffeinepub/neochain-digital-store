@@ -174,7 +174,7 @@ export default function EarningsSection() {
   // --- Spin wheel ---
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<number | null>(null);
-  const [freeSpinAvailable, setFreeSpinAvailable] = useState(false);
+  const [spinAvailable, setSpinAvailable] = useState(false);
   const [nextSpinCountdown, setNextSpinCountdown] = useState("");
   const [spinDeg, setSpinDeg] = useState(0);
   const [spinCount, setSpinCount] = useState(0);
@@ -206,16 +206,16 @@ export default function EarningsSection() {
       const lastSpinKey = `lastSpin_${principalText}`;
       const lastSpin = localStorage.getItem(lastSpinKey);
       if (!lastSpin) {
-        setFreeSpinAvailable(true);
+        setSpinAvailable(true);
         setNextSpinCountdown("");
       } else {
         const last = Number.parseInt(lastSpin, 10);
         const nextTime = last + 24 * 60 * 60 * 1000;
         if (Date.now() >= nextTime) {
-          setFreeSpinAvailable(true);
+          setSpinAvailable(true);
           setNextSpinCountdown("");
         } else {
-          setFreeSpinAvailable(false);
+          setSpinAvailable(false);
           setNextSpinCountdown(getCountdown(nextTime));
         }
       }
@@ -225,11 +225,8 @@ export default function EarningsSection() {
     return () => clearInterval(interval);
   }, [principalText, identity]);
 
-  const PAID_SPIN_COST = 30;
-
-  const handleSpin = async (paid = false) => {
-    if (isSpinning) return;
-    if (!paid && !freeSpinAvailable) return;
+  const handleSpin = async () => {
+    if (!spinAvailable || isSpinning) return;
     if (!identity) {
       toast.error("Please log in to spin");
       return;
@@ -246,17 +243,6 @@ export default function EarningsSection() {
     if (!actor) {
       toast.error("Connection error. Please refresh.");
       return;
-    }
-
-    // Paid spin: check balance
-    if (paid) {
-      const bal = Number(userProfile.balance);
-      if (bal < PAID_SPIN_COST) {
-        toast.error(
-          `Insufficient balance! You need ₹${PAID_SPIN_COST} to spin.`,
-        );
-        return;
-      }
     }
 
     const audioCtx = getAudioCtx();
@@ -298,24 +284,19 @@ export default function EarningsSection() {
       // Normalize spin degree to avoid huge numbers
       setSpinDeg(targetDeg % 360);
 
-      // Credit reward (deduct paid spin cost if applicable)
-      const balanceDelta = paid
-        ? BigInt(reward) - BigInt(PAID_SPIN_COST)
-        : BigInt(reward);
+      // Credit reward
       const updated = {
         ...userProfile,
-        balance: userProfile.balance + balanceDelta,
+        balance: userProfile.balance + BigInt(reward),
       };
       await actor.saveCallerUserProfile(updated);
 
       localStorage.setItem(countKey, String(currentCount));
       setSpinCount(currentCount);
-      if (!paid) {
-        localStorage.setItem(lastSpinKey, String(Date.now()));
-        setFreeSpinAvailable(false);
-      }
+      localStorage.setItem(lastSpinKey, String(Date.now()));
       qc.invalidateQueries({ queryKey: ["userProfile"] });
       setSpinResult(reward);
+      setSpinAvailable(false);
 
       if (audioCtx) playWin(audioCtx);
       toast.success(
@@ -556,7 +537,7 @@ export default function EarningsSection() {
                 className="absolute inset-0 rounded-full pointer-events-none"
                 style={{
                   background: "transparent",
-                  boxShadow: freeSpinAvailable
+                  boxShadow: spinAvailable
                     ? "0 0 40px rgba(201,60,255,0.45), 0 0 80px rgba(201,60,255,0.18), inset 0 0 20px rgba(201,60,255,0.1)"
                     : "0 0 15px rgba(201,60,255,0.18)",
                   borderRadius: "50%",
@@ -743,10 +724,10 @@ export default function EarningsSection() {
               </div>
             )}
 
-            {freeSpinAvailable ? (
+            {spinAvailable ? (
               <button
                 type="button"
-                onClick={() => handleSpin(false)}
+                onClick={handleSpin}
                 disabled={isSpinning}
                 className="w-full py-3.5 rounded-xl font-display font-black text-base transition-all disabled:opacity-60 spin-btn-pulse"
                 style={{
@@ -762,49 +743,20 @@ export default function EarningsSection() {
                 }}
                 data-ocid="earnings.button"
               >
-                {isSpinning ? "⏳ Spinning..." : "🎰 FREE SPIN!"}
+                {isSpinning ? "⏳ Spinning..." : "🎰 SPIN NOW!"}
               </button>
             ) : (
-              <div className="flex flex-col gap-2 w-full">
-                {nextSpinCountdown && (
-                  <div
-                    className="w-full py-2 rounded-xl text-center text-sm"
-                    style={{
-                      background: "rgba(255,255,255,0.03)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }}
-                  >
-                    <div className="flex items-center justify-center gap-1.5 text-muted-foreground text-xs">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Free spin in: </span>
-                      <span className="font-mono font-bold">
-                        {nextSpinCountdown}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleSpin(true)}
-                  disabled={isSpinning}
-                  className="w-full py-3.5 rounded-xl font-display font-black text-base transition-all disabled:opacity-60"
-                  style={{
-                    background: isSpinning
-                      ? "rgba(38,214,255,0.08)"
-                      : "linear-gradient(135deg, rgba(38,214,255,0.25) 0%, rgba(123,77,255,0.3) 100%)",
-                    border: "1px solid rgba(38, 214, 255, 0.5)",
-                    boxShadow: isSpinning
-                      ? "none"
-                      : "0 0 20px rgba(38,214,255,0.3), 0 4px 12px rgba(123,77,255,0.2)",
-                    color: "oklch(0.9 0.15 200)",
-                    letterSpacing: "0.05em",
-                  }}
-                  data-ocid="earnings.button.paid"
-                >
-                  {isSpinning
-                    ? "⏳ Spinning..."
-                    : `⚡ Spin for ₹${PAID_SPIN_COST}`}
-                </button>
+              <div
+                className="w-full py-2.5 rounded-xl text-center text-sm"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
+                  <Clock className="w-3.5 h-3.5" />
+                  <span className="font-mono text-xs">{nextSpinCountdown}</span>
+                </div>
               </div>
             )}
           </motion.div>
