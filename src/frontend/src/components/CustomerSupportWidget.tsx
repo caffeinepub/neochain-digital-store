@@ -200,6 +200,12 @@ export default function CustomerSupportWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, botTyping]);
 
+  // Open widget via custom event (e.g. from ForgotAccessModal)
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    window.addEventListener("open-support-widget", handler);
+    return () => window.removeEventListener("open-support-widget", handler);
+  }, []);
   const addMessage = (
     role: "bot" | "user",
     text: string,

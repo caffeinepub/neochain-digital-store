@@ -1,22 +1,73 @@
 import { Lock, Shield, User } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const ATTEMPTS_KEY = "neochain_admin_attempts";
+const LOCKOUT_KEY = "neochain_admin_lockout";
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000;
+
+function getLockoutRemaining(): number {
+  const lockout = localStorage.getItem(LOCKOUT_KEY);
+  if (!lockout) return 0;
+  const remaining = Number(lockout) + LOCKOUT_MS - Date.now();
+  return remaining > 0 ? remaining : 0;
+}
+
+function formatCountdown(ms: number): string {
+  const total = Math.ceil(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
 
 export default function AdminLoginPage({ onLogin }: { onLogin: () => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [lockoutRemaining, setLockoutRemaining] = useState(getLockoutRemaining);
+
+  // Countdown timer
+  useEffect(() => {
+    if (lockoutRemaining <= 0) return;
+    const interval = setInterval(() => {
+      const remaining = getLockoutRemaining();
+      setLockoutRemaining(remaining);
+      if (remaining <= 0) {
+        localStorage.removeItem(LOCKOUT_KEY);
+        localStorage.removeItem(ATTEMPTS_KEY);
+        setError("");
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [lockoutRemaining]);
+
+  const isLocked = lockoutRemaining > 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
     setIsLoading(true);
     setError("");
     setTimeout(() => {
       if (username === "admin" && password === "admin2024") {
+        localStorage.removeItem(ATTEMPTS_KEY);
+        localStorage.removeItem(LOCKOUT_KEY);
         onLogin();
       } else {
-        setError("Invalid credentials. Access denied.");
+        const attempts = Number(localStorage.getItem(ATTEMPTS_KEY) ?? "0") + 1;
+        localStorage.setItem(ATTEMPTS_KEY, String(attempts));
+        if (attempts >= MAX_ATTEMPTS) {
+          localStorage.setItem(LOCKOUT_KEY, String(Date.now()));
+          const remaining = getLockoutRemaining();
+          setLockoutRemaining(remaining);
+          setError("");
+        } else {
+          setError(
+            `Invalid credentials. Access denied. (${MAX_ATTEMPTS - attempts} attempt${MAX_ATTEMPTS - attempts === 1 ? "" : "s"} remaining)`,
+          );
+        }
       }
       setIsLoading(false);
     }, 600);
@@ -126,6 +177,7 @@ export default function AdminLoginPage({ onLogin }: { onLogin: () => void }) {
                   placeholder="Enter admin ID"
                   className="neon-input w-full pl-10 pr-4 py-3 text-sm"
                   autoComplete="username"
+                  disabled={isLocked}
                   data-ocid="admin.input"
                 />
               </div>
@@ -148,12 +200,37 @@ export default function AdminLoginPage({ onLogin }: { onLogin: () => void }) {
                   placeholder="Enter password"
                   className="neon-input w-full pl-10 pr-4 py-3 text-sm"
                   autoComplete="current-password"
+                  disabled={isLocked}
                   data-ocid="admin.input"
                 />
               </div>
             </div>
 
-            {error && (
+            {/* Lockout banner */}
+            {isLocked && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
+                style={{
+                  background: "rgba(220, 50, 50, 0.12)",
+                  border: "1px solid rgba(220, 50, 50, 0.45)",
+                  color: "oklch(0.7 0.2 27)",
+                }}
+                data-ocid="admin.error_state"
+              >
+                <span>🔒</span>
+                <span>
+                  Too many attempts. Try again in{" "}
+                  <span className="font-bold font-mono">
+                    {formatCountdown(lockoutRemaining)}
+                  </span>
+                </span>
+              </motion.div>
+            )}
+
+            {/* Regular error */}
+            {!isLocked && error && (
               <motion.div
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -171,7 +248,7 @@ export default function AdminLoginPage({ onLogin }: { onLogin: () => void }) {
 
             <button
               type="submit"
-              disabled={isLoading || !username || !password}
+              disabled={isLoading || !username || !password || isLocked}
               className="neon-btn-primary w-full py-3 text-sm flex items-center justify-center gap-2 mt-2"
               data-ocid="admin.submit_button"
             >
@@ -179,6 +256,8 @@ export default function AdminLoginPage({ onLogin }: { onLogin: () => void }) {
                 <>
                   <span className="animate-spin">◌</span> Authenticating...
                 </>
+              ) : isLocked ? (
+                <>🔒 Locked</>
               ) : (
                 <>
                   <Lock className="w-4 h-4" /> Access Admin Panel

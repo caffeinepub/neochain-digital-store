@@ -9,6 +9,26 @@ import type {
 import type { UserRole } from "../backend.d";
 import { useActor } from "./useActor";
 
+// localStorage cache helpers — survive fresh deployments
+const USERS_CACHE_KEY = "neochain_users_cache";
+const TRANSACTIONS_CACHE_KEY = "neochain_tx_cache";
+const PAYMENT_METHODS_CACHE_KEY = "neochain_pm_cache";
+
+function loadCache<T>(key: string): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCache<T>(key: string, data: T[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch {}
+}
+
 export function useUserProfile() {
   const { actor, isFetching } = useActor();
   return useQuery<UserProfile | null>({
@@ -38,8 +58,17 @@ export function useAllTransactions() {
   return useQuery<Transaction[]>({
     queryKey: ["allTransactions"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllTransactions();
+      if (!actor) return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
+      try {
+        const result = await actor.getAllTransactions();
+        if (result && result.length > 0) {
+          saveCache(TRANSACTIONS_CACHE_KEY, result);
+          return result;
+        }
+        return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
+      } catch {
+        return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
+      }
     },
     enabled: !!actor && !isFetching,
   });
@@ -50,8 +79,17 @@ export function useAllUsers() {
   return useQuery<UserProfile[]>({
     queryKey: ["allUsers"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllUsers();
+      if (!actor) return loadCache<UserProfile>(USERS_CACHE_KEY);
+      try {
+        const result = await actor.getAllUsers();
+        if (result && result.length > 0) {
+          saveCache(USERS_CACHE_KEY, result);
+          return result;
+        }
+        return loadCache<UserProfile>(USERS_CACHE_KEY);
+      } catch {
+        return loadCache<UserProfile>(USERS_CACHE_KEY);
+      }
     },
     enabled: !!actor && !isFetching,
   });
@@ -87,8 +125,17 @@ export function usePaymentMethods() {
   return useQuery<PaymentMethod[]>({
     queryKey: ["paymentMethods"],
     queryFn: async () => {
-      if (!actor) return [];
-      return actor.getAllPaymentMethods();
+      if (!actor) return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
+      try {
+        const result = await actor.getAllPaymentMethods();
+        if (result && result.length > 0) {
+          saveCache(PAYMENT_METHODS_CACHE_KEY, result);
+          return result;
+        }
+        return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
+      } catch {
+        return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
+      }
     },
     enabled: !!actor && !isFetching,
   });

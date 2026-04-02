@@ -11,6 +11,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useUserProfile } from "../hooks/useQueries";
+import ForgotAccessModal from "./ForgotAccessModal";
 import PaymentModal from "./PaymentModal";
 import ReferralModal from "./ReferralModal";
 import WalletModal from "./WalletModal";
@@ -26,6 +27,7 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [walletOpen, setWalletOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
   const [paymentProduct, setPaymentProduct] = useState<{
     id: bigint;
     name: string;
@@ -298,45 +300,55 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
                 </>
               )}
 
-              {/* Login + Sign Up — shown when not logged in */}
+              {/* Login + Sign Up + Forgot Access — shown when not logged in */}
               {!isLoggedIn && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-col items-end gap-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={login}
+                      disabled={isLoggingIn}
+                      className="neon-btn flex items-center gap-1.5 px-3 py-2"
+                      style={{
+                        borderColor: "rgba(38, 214, 255, 0.5)",
+                        color: "oklch(0.82 0.18 200)",
+                        boxShadow: "0 0 10px rgba(38, 214, 255, 0.12)",
+                      }}
+                      data-ocid="nav.login_button"
+                    >
+                      {isLoggingIn ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <LogIn className="w-3.5 h-3.5" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {isLoggingIn ? "..." : "Login"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignUp}
+                      disabled={isLoggingIn}
+                      className="neon-btn-primary flex items-center gap-1.5 px-3 py-2"
+                      data-ocid="nav.signup_button"
+                    >
+                      {isLoggingIn ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <UserPlus className="w-3.5 h-3.5" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {isLoggingIn ? "..." : "Sign Up"}
+                      </span>
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={login}
-                    disabled={isLoggingIn}
-                    className="neon-btn flex items-center gap-1.5 px-3 py-2"
-                    style={{
-                      borderColor: "rgba(38, 214, 255, 0.5)",
-                      color: "oklch(0.82 0.18 200)",
-                      boxShadow: "0 0 10px rgba(38, 214, 255, 0.12)",
-                    }}
-                    data-ocid="nav.login_button"
+                    onClick={() => setForgotOpen(true)}
+                    className="text-xs text-muted-foreground hover:text-cyan-400 cursor-pointer transition-colors leading-none pr-0.5"
+                    data-ocid="forgot.open_modal_button"
                   >
-                    {isLoggingIn ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <LogIn className="w-3.5 h-3.5" />
-                    )}
-                    <span className="text-xs font-semibold">
-                      {isLoggingIn ? "..." : "Login"}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSignUp}
-                    disabled={isLoggingIn}
-                    className="neon-btn-primary flex items-center gap-1.5 px-3 py-2"
-                    data-ocid="nav.signup_button"
-                  >
-                    {isLoggingIn ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <UserPlus className="w-3.5 h-3.5" />
-                    )}
-                    <span className="text-xs font-semibold">
-                      {isLoggingIn ? "..." : "Sign Up"}
-                    </span>
+                    Forgot Access?
                   </button>
                 </div>
               )}
@@ -371,6 +383,7 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
         onClose={() => setReferralOpen(false)}
         userProfile={userProfile ?? null}
       />
+      {forgotOpen && <ForgotAccessModal onClose={() => setForgotOpen(false)} />}
     </>
   );
 }

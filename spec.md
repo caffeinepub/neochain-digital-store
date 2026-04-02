@@ -1,28 +1,31 @@
-# NeoChain Digital Earning — v27 Bug Fix & Branding
+# NeoChain Digital Earning
 
 ## Current State
-App has home screen with Dashboard, Plans (2x2), Earnings Hub. Header has Balance/Withdraw/Login/SignUp/3-dot. Admin panel has multiple tabs. Buy Plan uses PaymentModal (createDepositRequest). Withdrawal uses WalletModal (requestWithdrawal). Both save extraNotes as JSON with all user-provided details. Admin View Details shows these fields via TxDetailModal parsing parsedNotes.
+The app uses Internet Identity (ICP) for user authentication — no username/password. Users log in via device biometrics/passkeys through the II popup. Admin login is a separate hardcoded username/password form (admin/admin2024). The RegisterModal only collects username + optional referral code after II login. No brute-force protection exists on admin login. No "Forgot Password" UX exists anywhere.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Above the dashboard section on the home page: small circular logo (from /assets/generated/sandeep-logo-transparent.dim_80x80.png) + "Made by Sandeep Kumar" text in glowing blue-white gradient, with side glow rays around the logo. The whole block is small and centered.
-- Admin panel new tab: "System Health" — shows a live error log that captures frontend JS errors (window.onerror, unhandledrejection) and displays them in a list with timestamp, message, and stack. Admin can clear the log. This lets admin see if any bugs/errors/glitches happen.
+- "Forgot Access?" link below the Login button in the Navbar (and in RegisterModal)
+- `ForgotAccessModal` component: explains Internet Identity recovery steps, links to https://identity.ic0.app, and includes a helpdesk contact option
+- Brute-force protection on AdminLoginPage: max 5 failed attempts → 15-minute lockout (stored in localStorage with timestamp)
+- Lockout countdown timer displayed when blocked
+- On-screen OTP verification modal: generates a 6-digit OTP client-side, displays it to the user for copy, allows re-generation after 5 minutes. Used as an optional 2FA step before sensitive account actions.
+- Rate limiting for registration: max 3 registration attempts per session before cooldown
+- Input validation improvements across RegisterModal and PaymentModal: sanitize inputs, show proper error messages
 
 ### Modify
-- **Buy Plan submit fix**: In PaymentModal handleSubmit, after the deposit.mutateAsync call fails with a message that includes 'not registered' or 'User is not registered', show a specific message: "Please login and complete registration before buying a plan." Also ensure the error is caught and displayed properly.
-- **Withdrawal submit fix**: In WalletModal handleWithdraw, fix the same — if user profile not found or not registered, show clear message. Also fix: the amount field should clear after success.
-- **Admin View Details — Withdrawal**: Ensure ALL fields from parsedNotes show in TxDetailModal for withdrawals: method, name, id (with correct label), ifsc, branch, bank, amount. Currently some fields might be missing. Add a clear "Withdrawal Account Details" section header.
-- **Admin View Details — Plan Purchase**: Ensure parsedNotes.paymentMethod, name, txnId, screenshot all show. Currently txId vs txnId mismatch — fix: check both `parsedNotes.txId` and `parsedNotes.txnId` and also `parsedNotes.txId || parsedNotes.txnId`. Also show plan amount.
-- **General QA**: Fix any TypeScript errors, lint warnings, missing keys, and ensure all interactive elements work.
+- `AdminLoginPage.tsx`: Add failed attempt counter + lockout logic using localStorage, show lockout countdown, disable form when locked
+- `Navbar.tsx`: Add small "Forgot Access?" text link that opens ForgotAccessModal
+- `RegisterModal.tsx`: Improve input validation, add "Forgot Access?" link
 
 ### Remove
-- Nothing to remove
+- Nothing removed
 
 ## Implementation Plan
-1. In LandingPage.tsx, above the Dashboard section (before the dashboard card/section), add a small centered branding block: circular logo image (40px) + "Made by Sandeep Kumar" text with glowing blue-white gradient + side glow effect via CSS box-shadow/filter.
-2. In PaymentModal.tsx, improve error handling in handleSubmit to catch 'not registered'/'User is not registered' errors specifically.
-3. In WalletModal.tsx, fix handleWithdraw error handling. Also ensure form resets after success (currently wFields reset is there but verify toast success shows properly).
-4. In AdminPanel.tsx TxDetailModal, add "Withdrawal Account Details" heading before withdrawal fields, fix `txnId` vs `txId` display, ensure all parsedNotes fields render.
-5. In AdminPanel.tsx, add a new "System Health" tab with frontend error capture using window.onerror and window.addEventListener('unhandledrejection') stored in a local state array, displayed in a table with clear button.
-6. Run validation to fix any build errors.
+1. Create `ForgotAccessModal.tsx` component with Internet Identity recovery guide (step-by-step), link to identity.ic0.app, and support ticket option
+2. Modify `AdminLoginPage.tsx` to add brute-force protection: track failed attempts in localStorage (`neochain_admin_attempts`, `neochain_admin_lockout`), lock after 5 failures for 15 minutes, show countdown
+3. Modify `Navbar.tsx` to show "Forgot Access?" link near Login button
+4. Modify `RegisterModal.tsx` to improve input validation and add "Forgot Access?" help text
+5. Create `OtpVerificationModal.tsx` for on-screen OTP display/verification (client-side generated, no email needed)
+6. Validate, lint, and build

@@ -99,6 +99,25 @@ function parseMethodDesc(description: string): MethodData {
   }
 }
 
+// QR code localStorage persistence — survives fresh deployments
+const QR_STORAGE_KEY = "neochain_qr_data";
+
+function getLocalQRData(): Record<string, MethodData> {
+  try {
+    const raw = localStorage.getItem(QR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveLocalQRData(methodName: string, data: MethodData) {
+  try {
+    const existing = getLocalQRData();
+    existing[methodName] = data;
+    localStorage.setItem(QR_STORAGE_KEY, JSON.stringify(existing));
+  } catch {}
+}
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === TransactionStatus.approved
@@ -436,9 +455,13 @@ function QrMethodCard({
   handleUpdateMethod,
 }: QrMethodCardProps) {
   const existing = paymentMethods?.find((m) => m.name === methodName);
-  const data = existing
-    ? parseMethodDesc(existing.description)
-    : { qrBase64: null, enabled: true };
+  const backendData = existing ? parseMethodDesc(existing.description) : null;
+  // localStorage wins if it has QR code (survives fresh deployments)
+  const localQRData = getLocalQRData();
+  const localData = localQRData[methodName];
+  const data: MethodData = localData?.qrBase64
+    ? localData
+    : (backendData ?? { qrBase64: null, enabled: true });
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -1452,6 +1475,8 @@ export default function AdminPanel() {
       ? parseMethodDesc(existing.description)
       : { qrBase64: null, enabled: true };
     const updated: MethodData = { ...current, ...updates };
+    // Save to localStorage FIRST — survives fresh deployments
+    saveLocalQRData(name, updated);
     try {
       if (existing) await removePaymentMethod.mutateAsync(name);
       await addPaymentMethod.mutateAsync({
@@ -1460,7 +1485,7 @@ export default function AdminPanel() {
       });
       toast.success(`${name} updated`);
     } catch {
-      toast.error(`Failed to update ${name}`);
+      toast.error(`Failed to update ${name} on backend — saved locally`);
     }
   };
 
@@ -1598,7 +1623,10 @@ export default function AdminPanel() {
                 className="p-8 text-center text-muted-foreground"
                 data-ocid="users.empty_state"
               >
-                No users yet
+                <p>No users registered yet</p>
+                <p className="text-xs mt-1 opacity-60">
+                  Users will appear here after they register on the website
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
