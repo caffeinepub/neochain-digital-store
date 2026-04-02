@@ -71,6 +71,7 @@ export function useAllTransactions() {
       }
     },
     enabled: !!actor && !isFetching,
+    staleTime: 30000,
   });
 }
 
@@ -92,6 +93,7 @@ export function useAllUsers() {
       }
     },
     enabled: !!actor && !isFetching,
+    staleTime: 30000,
   });
 }
 
@@ -138,6 +140,7 @@ export function usePaymentMethods() {
       }
     },
     enabled: !!actor && !isFetching,
+    staleTime: 30000,
   });
 }
 

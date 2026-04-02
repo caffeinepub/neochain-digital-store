@@ -1355,6 +1355,156 @@ function SupportTicketsTab() {
   );
 }
 
+// ===== User Credentials Modal =====
+interface UserCredentialsModalProps {
+  user: import("../backend.d").UserProfile;
+  onClose: () => void;
+  onSave: (
+    user: import("../backend.d").UserProfile,
+    newUsername: string,
+    newPassword: string,
+  ) => void;
+  isSaving: boolean;
+}
+
+function UserCredentialsModal({
+  user,
+  onClose,
+  onSave,
+  isSaving,
+}: UserCredentialsModalProps) {
+  const [newUsername, setNewUsername] = useState(user.username);
+  const [newPassword, setNewPassword] = useState("");
+  const email =
+    localStorage.getItem(`neochain_user_email_${user.user.toString()}`) ?? "";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      role="presentation"
+      data-ocid="credentials.modal"
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        transition={{ duration: 0.2 }}
+        className="neon-card p-6 w-full max-w-md relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display font-bold text-xl neon-text-cyan">
+            User Credentials
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(123,77,255,0.2)",
+            }}
+            data-ocid="credentials.close_button"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-1 mb-6">
+          <DetailRow
+            label="Principal ID"
+            value={
+              <span className="text-xs break-all">{user.user.toString()}</span>
+            }
+          />
+          <DetailRow label="Current Username" value={user.username} />
+          <DetailRow
+            label="Email"
+            value={
+              email || (
+                <span className="italic text-muted-foreground">
+                  Not provided
+                </span>
+              )
+            }
+          />
+          <DetailRow label="Account Type" value="Internet Identity" />
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
+              New Username
+              <input
+                type="text"
+                className="neon-input w-full px-3 py-2 text-sm mt-1.5"
+                placeholder="Enter new username"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                data-ocid="credentials.input"
+              />
+            </label>
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold block mb-1.5">
+              New Password{" "}
+              <span className="text-muted-foreground font-normal font-normal">
+                (leave blank to keep unchanged)
+              </span>
+              <input
+                type="text"
+                className="neon-input w-full px-3 py-2 text-sm mt-1.5"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                data-ocid="credentials.input"
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={() => onSave(user, newUsername, newPassword)}
+            disabled={isSaving}
+            className="flex-1 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
+            style={{
+              background: "rgba(123,77,255,0.15)",
+              border: "1px solid rgba(123,77,255,0.5)",
+              color: "oklch(0.85 0.22 280)",
+            }}
+            data-ocid="credentials.save_button"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ShieldCheck className="w-4 h-4" />
+            )}
+            {isSaving ? "Saving..." : "Save Credentials"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.6)",
+            }}
+            data-ocid="credentials.cancel_button"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
@@ -1408,6 +1558,10 @@ export default function AdminPanel() {
   const [balanceInputs, setBalanceInputs] = useState<Record<string, string>>(
     {},
   );
+  const [credentialsModalUser, setCredentialsModalUser] = useState<
+    import("../backend.d").UserProfile | null
+  >(null);
+  const [credSaving, setCredSaving] = useState(false);
 
   const tabs: { id: AdminTab; label: string; icon: React.ElementType }[] = [
     { id: "stats", label: "Overview", icon: Activity },
@@ -1486,6 +1640,36 @@ export default function AdminPanel() {
       toast.success(`${name} updated`);
     } catch {
       toast.error(`Failed to update ${name} on backend — saved locally`);
+    }
+  };
+
+  const handleSaveCredentials = async (
+    user: import("../backend.d").UserProfile,
+    newUsername: string,
+    newPassword: string,
+  ) => {
+    if (!newUsername.trim()) {
+      toast.error("Username cannot be empty");
+      return;
+    }
+    setCredSaving(true);
+    try {
+      // Store username override in localStorage
+      const credKey = `neochain_admin_username_override_${user.user.toString()}`;
+      localStorage.setItem(credKey, newUsername.trim());
+      // Store password reset in localStorage (base64 encoded)
+      if (newPassword.trim()) {
+        const passKey = `neochain_admin_password_reset_${user.user.toString()}`;
+        localStorage.setItem(passKey, btoa(newPassword.trim()));
+      }
+      toast.success(
+        `Credentials updated for ${user.username}. New username: ${newUsername.trim()}`,
+      );
+      setCredentialsModalUser(null);
+    } catch {
+      toast.error("Failed to save credentials");
+    } finally {
+      setCredSaving(false);
     }
   };
 
@@ -1640,6 +1824,7 @@ export default function AdminPanel() {
                         "Balance",
                         "Referral Earnings",
                         "Referral Code",
+                        "Email",
                         "Actions",
                       ].map((h) => (
                         <th
@@ -1673,8 +1858,13 @@ export default function AdminPanel() {
                         <td className="py-3 px-4 font-mono text-xs text-muted-foreground">
                           {u.referralCode}
                         </td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground">
+                          {localStorage.getItem(
+                            `neochain_user_email_${u.user.toString()}`,
+                          ) ?? "—"}
+                        </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <input
                               type="number"
                               className="neon-input px-2 py-1 text-xs w-24"
@@ -1707,6 +1897,18 @@ export default function AdminPanel() {
                               data-ocid="users.button"
                             >
                               Admin
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setCredentialsModalUser(u)}
+                              className="neon-btn px-2 py-1 text-xs"
+                              style={{
+                                border: "1px solid rgba(38,214,255,0.4)",
+                                color: "oklch(0.85 0.18 200)",
+                              }}
+                              data-ocid="users.edit_button"
+                            >
+                              Credentials
                             </button>
                           </div>
                         </td>
@@ -1970,6 +2172,15 @@ export default function AdminPanel() {
       )}
 
       {/* Transaction Detail Modal */}
+      {credentialsModalUser && (
+        <UserCredentialsModal
+          user={credentialsModalUser}
+          onClose={() => setCredentialsModalUser(null)}
+          onSave={handleSaveCredentials}
+          isSaving={credSaving}
+        />
+      )}
+
       {viewTx && (
         <TxDetailModal
           tx={viewTx}

@@ -46,17 +46,30 @@ function getCountdown(targetMs: number): string {
 }
 
 // Spin wheel constants
-const SPIN_AMOUNTS = [10, 12, 15, 18, 20, 22, 25, 30];
+// Segment layout: alternating WIN/LOSS
+// Index 0: WIN ₹30, 1: LOSS, 2: WIN ₹50, 3: LOSS, 4: WIN ₹70, 5: LOSS, 6: WIN ₹100, 7: LOSS
+const SPIN_SEGMENTS = [
+  { type: "win", amount: 30 },
+  { type: "loss", amount: 0 },
+  { type: "win", amount: 50 },
+  { type: "loss", amount: 0 },
+  { type: "win", amount: 70 },
+  { type: "loss", amount: 0 },
+  { type: "win", amount: 100 },
+  { type: "loss", amount: 0 },
+];
+const WIN_INDICES = [0, 2, 4, 6];
+const LOSS_INDICES = [1, 3, 5, 7];
 const SPIN_DURATION_MS = 3000;
 const SEGMENT_COLORS = [
-  "#8b5cf6", // purple
-  "#3b82f6", // blue
-  "#06b6d4", // cyan
-  "#10b981", // teal
-  "#ec4899", // pink
-  "#a855f7", // violet
-  "#f59e0b", // amber
-  "#6366f1", // indigo
+  "#8b5cf6", // index 0 WIN ₹30 — purple
+  "#1e1b4b", // index 1 LOSS — dark
+  "#06b6d4", // index 2 WIN ₹50 — cyan
+  "#1e1b4b", // index 3 LOSS — dark
+  "#a855f7", // index 4 WIN ₹70 — violet
+  "#1e1b4b", // index 5 LOSS — dark
+  "#3b82f6", // index 6 WIN ₹100 — blue
+  "#1e1b4b", // index 7 LOSS — dark
 ];
 const WHEEL_SIZE = 240;
 const WHEEL_CX = 120;
@@ -174,20 +187,11 @@ export default function EarningsSection() {
   // --- Spin wheel ---
   const [isSpinning, setIsSpinning] = useState(false);
   const [spinResult, setSpinResult] = useState<number | null>(null);
+  const [spinWon, setSpinWon] = useState<boolean>(false);
+  const [spinDone, setSpinDone] = useState<boolean>(false);
   const [freeSpinAvailable, setFreeSpinAvailable] = useState(false);
   const [nextSpinCountdown, setNextSpinCountdown] = useState("");
   const [spinDeg, setSpinDeg] = useState(0);
-  const [spinCount, setSpinCount] = useState(0);
-
-  // Load spin count on mount
-  useEffect(() => {
-    if (!principalText) return;
-    const count = Number.parseInt(
-      localStorage.getItem(`spinCount_${principalText}`) ?? "0",
-      10,
-    );
-    setSpinCount(count);
-  }, [principalText]);
 
   // Audio context ref (lazy init on first interaction)
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -264,18 +268,42 @@ export default function EarningsSection() {
 
     setIsSpinning(true);
     setSpinResult(null);
+    setSpinWon(false);
+    setSpinDone(false);
 
     try {
-      const countKey = `spinCount_${principalText}`;
       const lastSpinKey = `lastSpin_${principalText}`;
-      const currentCount =
-        Number.parseInt(localStorage.getItem(countKey) ?? "0", 10) + 1;
-      const isSeventhSpin = currentCount % 7 === 0;
+      const lossStreakKey = `spinLossStreak_${principalText}`;
 
-      const winIndex = Math.floor(Math.random() * 8);
-      const reward = isSeventhSpin ? 50 : SPIN_AMOUNTS[winIndex];
+      // Anti-loss logic: read current streak
+      const lossStreak = Number.parseInt(
+        localStorage.getItem(lossStreakKey) ?? "0",
+        10,
+      );
 
-      const segCenter = winIndex * 45 + 22.5;
+      // Determine win or loss
+      let selectedIndex: number;
+      if (lossStreak >= 3) {
+        // Force a win
+        const winPool = WIN_INDICES;
+        selectedIndex = winPool[Math.floor(Math.random() * winPool.length)];
+      } else {
+        // 50% win, 50% loss
+        const isWin = Math.random() < 0.5;
+        if (isWin) {
+          selectedIndex =
+            WIN_INDICES[Math.floor(Math.random() * WIN_INDICES.length)];
+        } else {
+          selectedIndex =
+            LOSS_INDICES[Math.floor(Math.random() * LOSS_INDICES.length)];
+        }
+      }
+
+      const segment = SPIN_SEGMENTS[selectedIndex];
+      const isWinResult = segment.type === "win";
+
+      // Calculate spin degrees to land on selected segment center
+      const segCenter = selectedIndex * 45 + 22.5;
       const currentMod = ((spinDeg % 360) + 360) % 360;
       const offset = (((segCenter - currentMod) % 360) + 360) % 360;
       const targetDeg = spinDeg + 1800 + offset;
@@ -298,32 +326,45 @@ export default function EarningsSection() {
       // Normalize spin degree to avoid huge numbers
       setSpinDeg(targetDeg % 360);
 
-      // Credit reward (deduct paid spin cost if applicable)
-      const balanceDelta = paid
-        ? BigInt(reward) - BigInt(PAID_SPIN_COST)
-        : BigInt(reward);
-      const updated = {
-        ...userProfile,
-        balance: userProfile.balance + balanceDelta,
-      };
-      await actor.saveCallerUserProfile(updated);
+      if (isWinResult) {
+        // Win: credit amount, update streak
+        localStorage.setItem(lossStreakKey, "0");
+        const reward = segment.amount;
+        const balanceDelta = paid
+          ? BigInt(reward) - BigInt(PAID_SPIN_COST)
+          : BigInt(reward);
+        const updated = {
+          ...userProfile,
+          balance: userProfile.balance + balanceDelta,
+        };
+        await actor.saveCallerUserProfile(updated);
+        setSpinResult(reward);
+        setSpinWon(true);
+        setSpinDone(true);
+        if (audioCtx) playWin(audioCtx);
+        toast.success(`🎰 You won ₹${reward}!`, { duration: 4000 });
+      } else {
+        // Loss: increment streak, only deduct ₹30 if paid
+        const newStreak = lossStreak + 1;
+        localStorage.setItem(lossStreakKey, String(newStreak));
+        if (paid) {
+          const updated = {
+            ...userProfile,
+            balance: userProfile.balance - BigInt(PAID_SPIN_COST),
+          };
+          await actor.saveCallerUserProfile(updated);
+        }
+        setSpinDone(true);
+        setSpinResult(null);
+        setSpinWon(false);
+        toast.info("😢 Better Luck Next Time!", { duration: 3000 });
+      }
 
-      localStorage.setItem(countKey, String(currentCount));
-      setSpinCount(currentCount);
       if (!paid) {
         localStorage.setItem(lastSpinKey, String(Date.now()));
         setFreeSpinAvailable(false);
       }
       qc.invalidateQueries({ queryKey: ["userProfile"] });
-      setSpinResult(reward);
-
-      if (audioCtx) playWin(audioCtx);
-      toast.success(
-        isSeventhSpin
-          ? `🏆 Lucky 7th Spin! You won ₹${reward}!`
-          : `🎰 You won ₹${reward}!`,
-        { duration: 4000 },
-      );
     } catch {
       // Clear tick interval if still running
       if (tickIntervalRef.current) {
@@ -528,7 +569,7 @@ export default function EarningsSection() {
                   Daily Spin
                 </div>
                 <div className="text-muted-foreground text-xs">
-                  Win ₹10–₹30 (7th spin = ₹50)
+                  Win ₹30–₹100 | Free spin daily!
                 </div>
               </div>
             </div>
@@ -590,7 +631,7 @@ export default function EarningsSection() {
                   aria-label="Daily spin wheel"
                 >
                   {/* Segments */}
-                  {SPIN_AMOUNTS.map((amount, i) => {
+                  {SPIN_SEGMENTS.map((seg, i) => {
                     const textAngle = i * 45 + 22.5;
                     const textPos = polarToXY(
                       WHEEL_CX,
@@ -606,8 +647,13 @@ export default function EarningsSection() {
                       WHEEL_R,
                       i * 45,
                     );
+                    const isWinSeg = seg.type === "win";
                     return (
-                      <g key={amount}>
+                      <g
+                        key={
+                          seg.type === "win" ? `win-${seg.amount}` : `loss-${i}`
+                        }
+                      >
                         {/* Filled segment */}
                         <path
                           d={segmentPath(i)}
@@ -625,20 +671,19 @@ export default function EarningsSection() {
                           stroke="rgba(7,8,26,0.8)"
                           strokeWidth={1.5}
                         />
-                        {/* Amount label */}
+                        {/* Amount/label */}
                         <text
                           x={textPos.x}
                           y={textPos.y}
                           textAnchor="middle"
                           dominantBaseline="middle"
-                          fill="white"
-                          fontSize={12}
+                          fill={isWinSeg ? "white" : "#6b7280"}
+                          fontSize={isWinSeg ? 12 : 9}
                           fontWeight="bold"
                           fontFamily="system-ui, sans-serif"
                           transform={`rotate(${textAngle}, ${textPos.x}, ${textPos.y})`}
-                          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.8)" }}
                         >
-                          ₹{amount}
+                          {isWinSeg ? `₹${seg.amount}` : "😢 Try"}
                         </text>
                       </g>
                     );
@@ -677,8 +722,9 @@ export default function EarningsSection() {
             </div>
 
             <AnimatePresence>
-              {spinResult !== null && (
+              {spinWon && spinResult !== null ? (
                 <motion.div
+                  key="win"
                   initial={{ opacity: 0, scale: 0.6, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.8 }}
@@ -703,45 +749,31 @@ export default function EarningsSection() {
                     Credited to your balance!
                   </div>
                 </motion.div>
-              )}
+              ) : spinDone && !spinWon ? (
+                <motion.div
+                  key="loss"
+                  initial={{ opacity: 0, scale: 0.6, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="w-full text-center rounded-xl py-3 px-4"
+                  style={{
+                    background: "rgba(107,114,128,0.1)",
+                    border: "1px solid rgba(107,114,128,0.3)",
+                  }}
+                >
+                  <div className="text-3xl mb-1">😢</div>
+                  <div
+                    className="font-display font-bold text-xl"
+                    style={{ color: "#9ca3af" }}
+                  >
+                    Better Luck Next Time!
+                  </div>
+                  <div className="text-muted-foreground text-xs mt-1">
+                    Spin again to try your luck!
+                  </div>
+                </motion.div>
+              ) : null}
             </AnimatePresence>
-
-            {/* Spin count progress bar */}
-            {principalText && (
-              <div className="w-full">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
-                  <span>
-                    Spin {spinCount % 7}/{7}
-                  </span>
-                  <span className="text-yellow-400 font-semibold">
-                    {7 - (spinCount % 7) === 0
-                      ? "🏆 Special spin today!"
-                      : `${7 - (spinCount % 7)} more → ₹50!`}
-                  </span>
-                </div>
-                <div
-                  className="w-full h-2 rounded-full overflow-hidden"
-                  style={{ background: "rgba(255,255,255,0.07)" }}
-                >
-                  <motion.div
-                    className="h-full rounded-full"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, oklch(0.75 0.22 280), oklch(0.85 0.18 85))",
-                      boxShadow: "0 0 8px rgba(201,60,255,0.5)",
-                    }}
-                    animate={{ width: `${((spinCount % 7) / 7) * 100}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                  />
-                </div>
-                <div
-                  className="text-center text-xs text-muted-foreground mt-1"
-                  style={{ color: "oklch(0.72 0.18 85)" }}
-                >
-                  Every 7th spin = ₹50 Special! 🌟
-                </div>
-              </div>
-            )}
 
             {freeSpinAvailable ? (
               <button
