@@ -1038,6 +1038,292 @@ function CTASection({ onSignUp }: { onSignUp: () => void }) {
 }
 
 // ============================================================
+// ABOUT & TRUST SECTION
+// ============================================================
+function AboutTrustSection() {
+  const settings = (() => {
+    try {
+      const saved = localStorage.getItem("siteSettings");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const {
+    ownerName = "",
+    shortDescription = "",
+    email = "",
+    whatsapp = "",
+    telegram = "",
+    facebook = "",
+    instagram = "",
+    youtube = "",
+    tiktok = "",
+    review1 = "",
+    review2 = "",
+    review3 = "",
+    totalUsers = "",
+    totalPayments = "",
+  } = settings;
+
+  const reviews = [review1, review2, review3].filter(Boolean);
+  const socialLinks = [
+    { label: "Facebook", url: facebook, icon: "📘" },
+    { label: "Instagram", url: instagram, icon: "📸" },
+    { label: "YouTube", url: youtube, icon: "▶️" },
+    { label: "TikTok", url: tiktok, icon: "🎵" },
+    { label: "Telegram", url: telegram, icon: "✈️" },
+  ].filter((s) => s.url);
+
+  // Don't render if no data at all
+  if (
+    !ownerName &&
+    !email &&
+    !whatsapp &&
+    reviews.length === 0 &&
+    !totalUsers
+  ) {
+    return null;
+  }
+
+  const cardStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.04)",
+    border: "1px solid rgba(123,77,255,0.2)",
+    borderRadius: 14,
+    padding: 20,
+  };
+
+  return (
+    <section style={{ padding: "60px 20px", maxWidth: 900, margin: "0 auto" }}>
+      <h2
+        style={{
+          textAlign: "center",
+          fontSize: 24,
+          fontWeight: 800,
+          color: "#fff",
+          marginBottom: 8,
+          letterSpacing: 1,
+        }}
+      >
+        About &amp; Trust
+      </h2>
+      <p
+        style={{
+          textAlign: "center",
+          color: "rgba(180,180,210,0.6)",
+          fontSize: 14,
+          marginBottom: 36,
+        }}
+      >
+        Real platform, real earnings, trusted by thousands.
+      </p>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        {/* Owner Info + Contact */}
+        {(ownerName || shortDescription || email || whatsapp) && (
+          <div style={cardStyle}>
+            {ownerName && (
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: 16,
+                  color: "rgba(38,214,255,1)",
+                  marginBottom: 6,
+                }}
+              >
+                👤 {ownerName}
+              </div>
+            )}
+            {shortDescription && (
+              <p
+                style={{
+                  color: "rgba(200,200,230,0.85)",
+                  fontSize: 14,
+                  marginBottom: 12,
+                  lineHeight: 1.6,
+                }}
+              >
+                {shortDescription}
+              </p>
+            )}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {email && (
+                <a
+                  href={`mailto:${email}`}
+                  style={{
+                    color: "rgba(38,214,255,0.9)",
+                    fontSize: 13,
+                    textDecoration: "none",
+                  }}
+                >
+                  📧 {email}
+                </a>
+              )}
+              {whatsapp && (
+                <a
+                  href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    color: "rgba(38,214,255,0.9)",
+                    fontSize: 13,
+                    textDecoration: "none",
+                  }}
+                >
+                  💬 WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Social Links */}
+        {socialLinks.length > 0 && (
+          <div style={cardStyle}>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "rgba(180,180,210,0.7)",
+                marginBottom: 12,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              Follow Us
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: "rgba(123,77,255,0.15)",
+                    border: "1px solid rgba(123,77,255,0.3)",
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    color: "#fff",
+                    fontSize: 13,
+                    textDecoration: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  {s.icon} {s.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
+        {(totalUsers || totalPayments) && (
+          <div
+            style={{ ...cardStyle, display: "flex", gap: 20, flexWrap: "wrap" }}
+          >
+            {totalUsers && (
+              <div style={{ flex: 1, minWidth: 120, textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    color: "rgba(38,214,255,1)",
+                  }}
+                >
+                  {totalUsers}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(180,180,210,0.6)",
+                    marginTop: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                  }}
+                >
+                  Total Users
+                </div>
+              </div>
+            )}
+            {totalPayments && (
+              <div style={{ flex: 1, minWidth: 120, textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    color: "rgba(123,77,255,1)",
+                  }}
+                >
+                  {totalPayments}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "rgba(180,180,210,0.6)",
+                    marginTop: 4,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                  }}
+                >
+                  Total Payments
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reviews */}
+        {reviews.length > 0 && (
+          <div>
+            <div
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: "rgba(180,180,210,0.7)",
+                marginBottom: 12,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              ⭐ Customer Reviews
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {reviews.map((review: string, i: number) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: review list is static
+                <div key={i} style={cardStyle}>
+                  <div
+                    style={{
+                      color: "rgba(255,200,50,1)",
+                      fontSize: 14,
+                      marginBottom: 6,
+                    }}
+                  >
+                    ⭐⭐⭐⭐⭐
+                  </div>
+                  <p
+                    style={{
+                      color: "rgba(200,200,230,0.85)",
+                      fontSize: 14,
+                      margin: 0,
+                      lineHeight: 1.6,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    "{review}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================
 // MAIN LANDING PAGE
 // ============================================================
 export default function LandingPage() {
@@ -1259,6 +1545,7 @@ export default function LandingPage() {
 
           {/* SEO: CTA */}
           <CTASection onSignUp={login} />
+          <AboutTrustSection />
         </>
       )}
 

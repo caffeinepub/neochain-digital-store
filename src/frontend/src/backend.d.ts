@@ -40,6 +40,14 @@ export interface PaymentMethod {
     name: string;
     description: string;
 }
+export interface BackupData {
+    users: Array<UserProfile>;
+    transactions: Array<Transaction>;
+    snapshotTime: Time;
+    totalUsers: bigint;
+    totalBalance: bigint;
+}
+
 export interface UserProfile {
     referralCode: string;
     username: string;
@@ -100,4 +108,7 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateUserBalance(user: Principal, newBalance: bigint): Promise<void>;
     updateUserRole(user: Principal, role: UserRole): Promise<void>;
+    getFullBackupData(): Promise<BackupData>;
+    restoreUserBalances(updates: Array<[Principal, bigint]>): Promise<bigint>;
+
 }

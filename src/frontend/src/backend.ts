@@ -183,6 +183,8 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     updateUserBalance(user: Principal, newBalance: bigint): Promise<void>;
     updateUserRole(user: Principal, role: UserRole): Promise<void>;
+    getFullBackupData(): Promise<import("./backend.d").BackupData>;
+    restoreUserBalances(updates: Array<[Principal, bigint]>): Promise<bigint>;
 }
 import type { SupportTicket as _SupportTicket, TicketStatus as _TicketStatus, Time as _Time, Transaction as _Transaction, TransactionStatus as _TransactionStatus, TransactionType as _TransactionType, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -581,6 +583,26 @@ export class Backend implements backendInterface {
             const result = await this.actor.updateUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
             return result;
         }
+    }
+    async getFullBackupData(): Promise<import("./backend.d").BackupData> {
+        const [users, transactions] = await Promise.all([
+            this.getAllUsers(),
+            this.getAllTransactions(),
+        ]);
+        const totalBalance = users.reduce((s, u) => s + u.balance, BigInt(0));
+        return {
+            users,
+            transactions,
+            snapshotTime: BigInt(Date.now()) * BigInt(1_000_000),
+            totalUsers: BigInt(users.length),
+            totalBalance,
+        };
+    }
+    async restoreUserBalances(updates: Array<[Principal, bigint]>): Promise<bigint> {
+        await Promise.all(
+            updates.map(([user, balance]) => this.updateUserBalance(user, balance))
+        );
+        return BigInt(updates.length);
     }
 }
 function from_candid_SupportTicket_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _SupportTicket): SupportTicket {

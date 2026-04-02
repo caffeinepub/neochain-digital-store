@@ -1,11 +1,20 @@
+import { Principal } from "@icp-sdk/core/principal";
 import {
   Activity,
+  AlertTriangle,
   CheckCircle,
+  CheckCircle2,
   CreditCard,
+  Database,
   Eye,
   Loader2,
   MessageCircle,
   Plus,
+  RefreshCw,
+  RotateCcw,
+  Save,
+  Settings,
+  Shield,
   ShieldCheck,
   Target,
   Trash2,
@@ -18,7 +27,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TransactionStatus, type UserRole } from "../backend.d";
-import type { PaymentMethod, Transaction } from "../backend.d";
+import type { BackupData, PaymentMethod, Transaction } from "../backend.d";
 import { Switch } from "../components/ui/switch";
 import {
   useAddPaymentMethod,
@@ -26,12 +35,14 @@ import {
   useAllTransactions,
   useAllUsers,
   useApproveTransaction,
+  useFullBackupData,
   usePaymentMethods,
   usePlatformStats,
   useRejectTransaction,
   useRemovePaymentMethod,
   useReplyToTicket,
   useResolveTicket,
+  useRestoreUserBalances,
   useUpdateUserBalance,
   useUpdateUserRole,
 } from "../hooks/useQueries";
@@ -55,7 +66,9 @@ type AdminTab =
   | "payments"
   | "ads"
   | "support"
-  | "health";
+  | "health"
+  | "userdb"
+  | "settings";
 
 interface AdTask {
   id: string;
@@ -1505,6 +1518,962 @@ function UserCredentialsModal({
   );
 }
 
+// ==================== USER DATABASE TAB ====================
+
+const DB_BACKUP_KEY = "neochain_db_backups_v1";
+const MAX_BACKUPS = 5;
+
+interface BackupSnapshot {
+  id: string;
+  timestamp: number;
+  totalUsers: number;
+  totalBalance: number;
+  users: Array<{
+    principal: string;
+    username: string;
+    balance: number;
+    referralCode: string;
+    referralEarnings: number;
+  }>;
+  transactionCount: number;
+}
+
+function saveBackupToStorage(snapshot: BackupSnapshot): BackupSnapshot[] {
+  try {
+    const raw = localStorage.getItem(DB_BACKUP_KEY);
+    const list: BackupSnapshot[] = raw ? JSON.parse(raw) : [];
+    list.unshift(snapshot);
+    const trimmed = list.slice(0, MAX_BACKUPS);
+    localStorage.setItem(DB_BACKUP_KEY, JSON.stringify(trimmed));
+    return trimmed;
+  } catch {
+    return [];
+  }
+}
+
+function loadBackupsFromStorage(): BackupSnapshot[] {
+  try {
+    const raw = localStorage.getItem(DB_BACKUP_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// ---- SITE SETTINGS INTERFACE ----
+interface SiteSettings {
+  websiteName: string;
+  ownerName: string;
+  shortDescription: string;
+  email: string;
+  whatsapp: string;
+  telegram: string;
+  facebook: string;
+  instagram: string;
+  youtube: string;
+  tiktok: string;
+  review1: string;
+  review2: string;
+  review3: string;
+  totalUsers: string;
+  totalPayments: string;
+}
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  websiteName: "NeoChain Digital Store",
+  ownerName: "",
+  shortDescription: "",
+  email: "",
+  whatsapp: "",
+  telegram: "",
+  facebook: "",
+  instagram: "",
+  youtube: "",
+  tiktok: "",
+  review1: "",
+  review2: "",
+  review3: "",
+  totalUsers: "",
+  totalPayments: "",
+};
+
+function SiteSettingsTab() {
+  const [settings, setSettings] = useState<SiteSettings>(() => {
+    try {
+      const saved = localStorage.getItem("siteSettings");
+      return saved
+        ? { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(saved) }
+        : DEFAULT_SITE_SETTINGS;
+    } catch {
+      return DEFAULT_SITE_SETTINGS;
+    }
+  });
+
+  const handleSave = () => {
+    try {
+      localStorage.setItem("siteSettings", JSON.stringify(settings));
+      toast.success("Site settings saved!");
+    } catch {
+      toast.error("Failed to save settings");
+    }
+  };
+
+  const field = (
+    label: string,
+    key: keyof SiteSettings,
+    placeholder?: string,
+  ) => (
+    <div style={{ marginBottom: 12 }}>
+      <label
+        htmlFor={`site-setting-${key}`}
+        style={{
+          display: "block",
+          fontSize: 12,
+          color: "rgba(180,180,210,0.8)",
+          marginBottom: 4,
+        }}
+      >
+        {label}
+      </label>
+      <input
+        id={`site-setting-${key}`}
+        type="text"
+        value={settings[key]}
+        placeholder={placeholder || label}
+        onChange={(e) =>
+          setSettings((prev) => ({ ...prev, [key]: e.target.value }))
+        }
+        style={{
+          width: "100%",
+          background: "rgba(255,255,255,0.05)",
+          border: "1px solid rgba(123,77,255,0.3)",
+          borderRadius: 8,
+          padding: "8px 12px",
+          color: "#fff",
+          fontSize: 14,
+          outline: "none",
+          boxSizing: "border-box",
+        }}
+      />
+    </div>
+  );
+
+  const sectionTitle = (title: string) => (
+    <h3
+      style={{
+        color: "rgba(38,214,255,1)",
+        fontSize: 14,
+        fontWeight: 700,
+        marginBottom: 12,
+        marginTop: 20,
+        textTransform: "uppercase",
+        letterSpacing: 1,
+      }}
+    >
+      {title}
+    </h3>
+  );
+
+  return (
+    <div style={{ padding: 24, maxWidth: 600 }}>
+      <h2
+        style={{
+          color: "#fff",
+          fontSize: 20,
+          fontWeight: 800,
+          marginBottom: 4,
+        }}
+      >
+        ⚙️ Site Settings
+      </h2>
+      <p
+        style={{
+          color: "rgba(180,180,210,0.6)",
+          fontSize: 13,
+          marginBottom: 24,
+        }}
+      >
+        Edit and save. Data shows in "About & Trust" section on homepage after
+        refresh.
+      </p>
+
+      {sectionTitle("👤 Basic Info")}
+      {field("Website Name", "websiteName")}
+      {field("Owner Name", "ownerName")}
+      {field(
+        "Short Description",
+        "shortDescription",
+        "Brief description of your platform",
+      )}
+
+      {sectionTitle("📞 Contact Info")}
+      {field("Email", "email", "your@email.com")}
+      {field("WhatsApp Number", "whatsapp", "+91XXXXXXXXXX")}
+      {field("Telegram Link", "telegram", "https://t.me/username")}
+
+      {sectionTitle("🌐 Social Links")}
+      {field("Facebook", "facebook", "https://facebook.com/...")}
+      {field("Instagram", "instagram", "https://instagram.com/...")}
+      {field("YouTube", "youtube", "https://youtube.com/...")}
+      {field("TikTok", "tiktok", "https://tiktok.com/@...")}
+
+      {sectionTitle("🔐 Trust Info")}
+      {field(
+        "Customer Review 1",
+        "review1",
+        "Great platform, earned ₹5000 in first month!",
+      )}
+      {field(
+        "Customer Review 2",
+        "review2",
+        "Easy to use, fast withdrawal. Highly recommend!",
+      )}
+      {field(
+        "Customer Review 3",
+        "review3",
+        "Best earning platform. Referral system is amazing!",
+      )}
+      {field("Total Users (e.g. 5000)", "totalUsers", "5000")}
+      {field("Total Payments (e.g. ₹25,00,000)", "totalPayments", "₹25,00,000")}
+
+      <button
+        type="button"
+        onClick={handleSave}
+        style={{
+          marginTop: 24,
+          background:
+            "linear-gradient(135deg, rgba(123,77,255,0.9), rgba(38,214,255,0.8))",
+          border: "none",
+          borderRadius: 10,
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 15,
+          padding: "12px 32px",
+          cursor: "pointer",
+          boxShadow: "0 0 20px rgba(123,77,255,0.4)",
+        }}
+      >
+        💾 Save Settings
+      </button>
+    </div>
+  );
+}
+
+function UserDatabaseTab() {
+  const [locked, setLocked] = useState(true);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [backups, setBackups] = useState<BackupSnapshot[]>(
+    loadBackupsFromStorage,
+  );
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isRecovering, setIsRecovering] = useState(false);
+  const [recoveryProgress, setRecoveryProgress] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [lastResult, setLastResult] = useState<{
+    type: "success" | "error";
+    msg: string;
+  } | null>(null);
+
+  const { data: backupData, refetch: refetchBackup } = useFullBackupData();
+  const { data: users } = useAllUsers();
+  const restoreBalances = useRestoreUserBalances();
+
+  const handleUnlock = () => {
+    if (passwordInput === "258008") {
+      setLocked(false);
+      setPasswordError("");
+    } else {
+      setPasswordError("Incorrect password. Access denied.");
+    }
+  };
+
+  const handleBackupNow = async () => {
+    setIsBackingUp(true);
+    try {
+      const { data: freshData } = await refetchBackup();
+      const data = (freshData ?? backupData) as BackupData | null | undefined;
+      if (data?.users && data.users.length >= 0) {
+        const snapshot: BackupSnapshot = {
+          id: `backup_${Date.now()}`,
+          timestamp: Date.now(),
+          totalUsers: Number(data.totalUsers),
+          totalBalance: Number(data.totalBalance),
+          users: data.users.map((u) => ({
+            principal: u.user.toString(),
+            username: u.username,
+            balance: Number(u.balance),
+            referralCode: u.referralCode,
+            referralEarnings: Number(u.referralEarnings),
+          })),
+          transactionCount: data.transactions ? data.transactions.length : 0,
+        };
+        const updated = saveBackupToStorage(snapshot);
+        setBackups(updated);
+        setLastResult({ type: "success", msg: "Backup saved successfully!" });
+        toast.success("Backup created!");
+      } else {
+        setLastResult({ type: "error", msg: "No data found to backup." });
+        toast.error("No data to backup");
+      }
+    } catch {
+      setLastResult({ type: "error", msg: "Backup failed. Please try again." });
+      toast.error("Backup failed");
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  const handleRecover = async () => {
+    setShowConfirm(false);
+    setIsRecovering(true);
+
+    const tryRestore = async (backup: BackupSnapshot) => {
+      setRecoveryProgress("Loading backup data...");
+      await new Promise((r) => setTimeout(r, 300));
+      setRecoveryProgress("Restoring user balances...");
+      const updates: Array<[Principal, bigint]> = backup.users.map((u) => [
+        Principal.fromText(u.principal),
+        BigInt(Math.round(u.balance)),
+      ]);
+      await restoreBalances.mutateAsync(updates);
+      setRecoveryProgress("Syncing data...");
+      await new Promise((r) => setTimeout(r, 500));
+      setRecoveryProgress("Done!");
+    };
+
+    try {
+      if (!backups[0]) {
+        throw new Error("No backup available");
+      }
+      try {
+        await tryRestore(backups[0]);
+      } catch {
+        if (backups[1]) {
+          setRecoveryProgress(
+            "Latest backup failed, trying previous backup...",
+          );
+          await new Promise((r) => setTimeout(r, 500));
+          await tryRestore(backups[1]);
+        } else {
+          throw new Error("No fallback backup available");
+        }
+      }
+      setLastResult({
+        type: "success",
+        msg: "All user data recovered successfully",
+      });
+      toast.success("All user data recovered successfully");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Recovery failed";
+      setLastResult({ type: "error", msg: `Recovery failed: ${msg}` });
+      toast.error("Recovery failed");
+    } finally {
+      setIsRecovering(false);
+    }
+  };
+
+  const totalUsers = users?.length ?? backups[0]?.totalUsers ?? 0;
+  const totalBalance = users
+    ? users.reduce((sum, u) => sum + Number(u.balance), 0)
+    : (backups[0]?.totalBalance ?? 0);
+
+  if (locked) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 420,
+          padding: "40px 20px",
+        }}
+      >
+        <div
+          style={{
+            background: "rgba(0,0,0,0.5)",
+            border: "1px solid rgba(38,214,255,0.4)",
+            borderRadius: 16,
+            padding: "40px 48px",
+            maxWidth: 400,
+            width: "100%",
+            textAlign: "center",
+            boxShadow: "0 0 40px rgba(38,214,255,0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 20,
+            }}
+          >
+            <Shield
+              size={56}
+              style={{
+                color: "rgba(38,214,255,1)",
+                filter: "drop-shadow(0 0 16px rgba(38,214,255,0.8))",
+              }}
+            />
+          </div>
+          <h2
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#fff",
+              marginBottom: 8,
+            }}
+          >
+            User Database
+          </h2>
+          <p
+            style={{
+              color: "rgba(255,255,255,0.6)",
+              fontSize: 14,
+              marginBottom: 28,
+            }}
+          >
+            Enter access password to continue
+          </p>
+          <input
+            data-ocid="userdb.input"
+            type="password"
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
+            placeholder="Enter password"
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              borderRadius: 8,
+              border: "1px solid rgba(38,214,255,0.4)",
+              background: "rgba(255,255,255,0.06)",
+              color: "#fff",
+              fontSize: 15,
+              outline: "none",
+              marginBottom: 12,
+              boxSizing: "border-box",
+            }}
+          />
+          {passwordError && (
+            <p
+              data-ocid="userdb.error_state"
+              style={{
+                color: "rgb(239,68,68)",
+                fontSize: 13,
+                marginBottom: 12,
+              }}
+            >
+              {passwordError}
+            </p>
+          )}
+          <button
+            data-ocid="userdb.primary_button"
+            type="button"
+            onClick={handleUnlock}
+            style={{
+              width: "100%",
+              padding: "11px 0",
+              borderRadius: 8,
+              border: "none",
+              background:
+                "linear-gradient(135deg, rgba(38,214,255,0.8), rgba(123,77,255,0.8))",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: "pointer",
+              boxShadow: "0 0 20px rgba(38,214,255,0.3)",
+              letterSpacing: 0.5,
+            }}
+          >
+            Unlock
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "0 8px", position: "relative" }}>
+      {/* Loading overlay */}
+      {isRecovering && (
+        <div
+          data-ocid="userdb.loading_state"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            borderRadius: 12,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            gap: 16,
+          }}
+        >
+          <Loader2
+            size={48}
+            style={{
+              color: "rgba(38,214,255,1)",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p
+            style={{
+              color: "rgba(38,214,255,1)",
+              fontWeight: 600,
+              fontSize: 16,
+            }}
+          >
+            {recoveryProgress}
+          </p>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 13 }}>
+            Please wait...
+          </p>
+        </div>
+      )}
+
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 24,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Database size={24} style={{ color: "rgba(38,214,255,1)" }} />
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 700,
+              color: "rgba(38,214,255,1)",
+            }}
+          >
+            User Database
+          </h2>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "rgba(34,197,94,0.1)",
+            border: "1px solid rgba(34,197,94,0.4)",
+            borderRadius: 20,
+            padding: "4px 12px",
+            fontSize: 12,
+            color: "rgb(34,197,94)",
+          }}
+        >
+          <CheckCircle2 size={13} />
+          <span>Secure Access</span>
+        </div>
+      </div>
+
+      {/* Result Banner */}
+      {lastResult && (
+        <div
+          data-ocid={
+            lastResult.type === "success"
+              ? "userdb.success_state"
+              : "userdb.error_state"
+          }
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "12px 16px",
+            borderRadius: 10,
+            marginBottom: 20,
+            background:
+              lastResult.type === "success"
+                ? "rgba(34,197,94,0.1)"
+                : "rgba(239,68,68,0.1)",
+            border: `1px solid ${lastResult.type === "success" ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"}`,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {lastResult.type === "success" ? (
+              <CheckCircle2 size={16} style={{ color: "rgb(34,197,94)" }} />
+            ) : (
+              <AlertTriangle size={16} style={{ color: "rgb(239,68,68)" }} />
+            )}
+            <span
+              style={{
+                color:
+                  lastResult.type === "success"
+                    ? "rgb(34,197,94)"
+                    : "rgb(239,68,68)",
+                fontWeight: 600,
+                fontSize: 14,
+              }}
+            >
+              {lastResult.msg}
+            </span>
+          </div>
+          <button
+            type="button"
+            data-ocid="userdb.close_button"
+            onClick={() => setLastResult(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "rgba(255,255,255,0.5)",
+              cursor: "pointer",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+          marginBottom: 28,
+        }}
+      >
+        <div
+          style={{
+            background: "rgba(0,0,0,0.3)",
+            border: "1px solid rgba(38,214,255,0.3)",
+            borderLeft: "4px solid rgba(38,214,255,0.8)",
+            borderRadius: 12,
+            padding: "20px 24px",
+          }}
+        >
+          <p
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 13,
+              marginBottom: 6,
+            }}
+          >
+            Total Users
+          </p>
+          <p style={{ color: "#fff", fontSize: 28, fontWeight: 700 }}>
+            {totalUsers}
+          </p>
+        </div>
+        <div
+          style={{
+            background: "rgba(0,0,0,0.3)",
+            border: "1px solid rgba(123,77,255,0.3)",
+            borderLeft: "4px solid rgba(123,77,255,0.8)",
+            borderRadius: 12,
+            padding: "20px 24px",
+          }}
+        >
+          <p
+            style={{
+              color: "rgba(255,255,255,0.5)",
+              fontSize: 13,
+              marginBottom: 6,
+            }}
+          >
+            Total Balance
+          </p>
+          <p style={{ color: "#fff", fontSize: 28, fontWeight: 700 }}>
+            ₹{totalBalance.toLocaleString("en-IN")}
+          </p>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div
+        style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}
+      >
+        <button
+          data-ocid="userdb.secondary_button"
+          type="button"
+          onClick={handleBackupNow}
+          disabled={isBackingUp}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 22px",
+            borderRadius: 10,
+            border: "1px solid rgba(38,214,255,0.5)",
+            background: "rgba(38,214,255,0.1)",
+            color: "rgba(38,214,255,1)",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: isBackingUp ? "not-allowed" : "pointer",
+            opacity: isBackingUp ? 0.7 : 1,
+            boxShadow: "0 0 16px rgba(38,214,255,0.15)",
+          }}
+        >
+          {isBackingUp ? (
+            <Loader2
+              size={16}
+              style={{ animation: "spin 1s linear infinite" }}
+            />
+          ) : (
+            <Save size={16} />
+          )}
+          {isBackingUp ? "Backing up..." : "💾 Backup Now"}
+        </button>
+        <button
+          data-ocid="userdb.primary_button"
+          type="button"
+          onClick={() => setShowConfirm(true)}
+          disabled={isRecovering || backups.length === 0}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 22px",
+            borderRadius: 10,
+            border: "1px solid rgba(123,77,255,0.5)",
+            background: "rgba(123,77,255,0.2)",
+            color: "rgba(180,140,255,1)",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor:
+              isRecovering || backups.length === 0 ? "not-allowed" : "pointer",
+            opacity: isRecovering || backups.length === 0 ? 0.7 : 1,
+            boxShadow: "0 0 16px rgba(123,77,255,0.15)",
+          }}
+        >
+          <RotateCcw size={16} />🔄 Recover All Data
+        </button>
+      </div>
+
+      {/* Backup History */}
+      <div
+        style={{
+          background: "rgba(0,0,0,0.3)",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: 12,
+          padding: "20px 24px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 16,
+          }}
+        >
+          <RefreshCw size={16} style={{ color: "rgba(38,214,255,0.8)" }} />
+          <h3
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.9)",
+            }}
+          >
+            Backup History (Last 5)
+          </h3>
+        </div>
+        {backups.length === 0 ? (
+          <div
+            data-ocid="userdb.empty_state"
+            style={{
+              textAlign: "center",
+              padding: "24px 0",
+              color: "rgba(255,255,255,0.4)",
+              fontSize: 14,
+            }}
+          >
+            No backups yet. Click "Backup Now" to create your first backup.
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {backups.map((b, i) => (
+              <div
+                key={b.id}
+                data-ocid={`userdb.item.${i + 1}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  background:
+                    i === 0
+                      ? "rgba(38,214,255,0.05)"
+                      : "rgba(255,255,255,0.03)",
+                  border: `1px solid ${i === 0 ? "rgba(38,214,255,0.25)" : "rgba(255,255,255,0.08)"}`,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {i === 0 && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background: "rgba(38,214,255,0.2)",
+                        color: "rgba(38,214,255,1)",
+                        border: "1px solid rgba(38,214,255,0.4)",
+                        borderRadius: 4,
+                        padding: "2px 6px",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      LATEST
+                    </span>
+                  )}
+                  <span
+                    style={{ color: "rgba(255,255,255,0.8)", fontSize: 13 }}
+                  >
+                    {new Date(b.timestamp).toLocaleString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: 20 }}>
+                  <span
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}
+                  >
+                    <span
+                      style={{
+                        color: "rgba(255,255,255,0.8)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {b.totalUsers}
+                    </span>{" "}
+                    users
+                  </span>
+                  <span
+                    style={{ color: "rgba(255,255,255,0.5)", fontSize: 12 }}
+                  >
+                    ₹
+                    <span
+                      style={{
+                        color: "rgba(255,255,255,0.8)",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {b.totalBalance.toLocaleString("en-IN")}
+                    </span>{" "}
+                    balance
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Modal */}
+      {showConfirm && (
+        <div
+          data-ocid="userdb.modal"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(15,10,30,0.98)",
+              border: "1px solid rgba(239,68,68,0.4)",
+              borderRadius: 16,
+              padding: "32px 36px",
+              maxWidth: 440,
+              width: "100%",
+              textAlign: "center",
+              boxShadow: "0 0 60px rgba(239,68,68,0.15)",
+            }}
+          >
+            <AlertTriangle
+              size={48}
+              style={{
+                color: "rgb(234,179,8)",
+                marginBottom: 16,
+                filter: "drop-shadow(0 0 12px rgba(234,179,8,0.5))",
+              }}
+            />
+            <h3
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: "#fff",
+                marginBottom: 12,
+              }}
+            >
+              Confirm Data Recovery
+            </h3>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.65)",
+                fontSize: 14,
+                lineHeight: 1.6,
+                marginBottom: 28,
+              }}
+            >
+              Are you sure you want to recover all data? This will restore all
+              user balances from the latest backup.
+            </p>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                data-ocid="userdb.cancel_button"
+                type="button"
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "rgba(255,255,255,0.8)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                data-ocid="userdb.confirm_button"
+                type="button"
+                onClick={handleRecover}
+                style={{
+                  padding: "10px 24px",
+                  borderRadius: 8,
+                  border: "1px solid rgba(239,68,68,0.5)",
+                  background: "rgba(239,68,68,0.2)",
+                  color: "rgb(248,113,113)",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  boxShadow: "0 0 16px rgba(239,68,68,0.2)",
+                }}
+              >
+                Yes, Recover All Data
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==================== END USER DATABASE TAB ====================
+
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
@@ -1573,6 +2542,8 @@ export default function AdminPanel() {
     { id: "ads", label: "Ads Tasks", icon: Target },
     { id: "support", label: "Support Tickets", icon: MessageCircle },
     { id: "health", label: "System Health", icon: Activity },
+    { id: "userdb", label: "User Database", icon: Database },
+    { id: "settings", label: "Site Settings", icon: Settings },
   ];
 
   const handleApprove = async (id: bigint) => {
@@ -2170,6 +3141,10 @@ export default function AdminPanel() {
           )}
         </div>
       )}
+
+      {activeTab === "userdb" && <UserDatabaseTab />}
+
+      {activeTab === "settings" && <SiteSettingsTab />}
 
       {/* Transaction Detail Modal */}
       {credentialsModalUser && (

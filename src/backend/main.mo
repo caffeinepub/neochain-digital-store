@@ -811,4 +811,63 @@ actor {
       };
     };
   };
+  // ──────────────────────────────────────────────
+  // BACKUP & RECOVERY
+  // ──────────────────────────────────────────────
+
+  public type BackupData = {
+    users : [UserProfile];
+    transactions : [Transaction];
+    snapshotTime : Time.Time;
+    totalUsers : Nat;
+    totalBalance : Nat;
+  };
+
+  // Returns full snapshot of all user and transaction data for backup purposes
+  public query ({ caller }) func getFullBackupData() : async BackupData {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can access backup data");
+    };
+    let allUsers = userProfiles.values().toArray().sort();
+    let allTxs = transactions.values().toArray().sort();
+    var totalBal : Nat = 0;
+    for (u in allUsers.vals()) {
+      totalBal += u.balance;
+    };
+    {
+      users = allUsers;
+      transactions = allTxs;
+      snapshotTime = Time.now();
+      totalUsers = allUsers.size();
+      totalBalance = totalBal;
+    };
+  };
+
+  // Restore user balances from a recovery operation (admin only)
+  public shared ({ caller }) func restoreUserBalances(updates : [(Principal, Nat)]) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can restore balances");
+    };
+    var count = 0;
+    for ((principal, balance) in updates.vals()) {
+      switch (userProfiles.get(principal)) {
+        case (?profile) {
+          let updated = {
+            user = profile.user;
+            username = profile.username;
+            balance = balance;
+            referralCode = profile.referralCode;
+            referredBy = profile.referredBy;
+            referralEarnings = profile.referralEarnings;
+          };
+          userProfiles.add(principal, updated);
+          count += 1;
+        };
+        case (null) {};
+      };
+    };
+    count;
+  };
+
+
 };

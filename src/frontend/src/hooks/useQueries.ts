@@ -353,3 +353,50 @@ export function useResolveTicket() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["allSupportTickets"] }),
   });
 }
+
+export function useFullBackupData() {
+  const { actor, isFetching } = useActor();
+  return useQuery({
+    queryKey: ["fullBackupData"],
+    queryFn: async () => {
+      if (!actor) return null;
+      const [users, transactions] = await Promise.all([
+        actor.getAllUsers(),
+        actor.getAllTransactions(),
+      ]);
+      const totalBalance = users.reduce((s, u) => s + u.balance, BigInt(0));
+      return {
+        users,
+        transactions,
+        snapshotTime: BigInt(Date.now()) * BigInt(1_000_000),
+        totalUsers: BigInt(users.length),
+        totalBalance,
+      };
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: false,
+  });
+}
+
+export function useRestoreUserBalances() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      updates: Array<[import("@icp-sdk/core/principal").Principal, bigint]>,
+    ) => {
+      if (!actor) throw new Error("Not connected");
+      await Promise.all(
+        updates.map(([user, balance]) =>
+          actor.updateUserBalance(user, balance),
+        ),
+      );
+      return BigInt(updates.length);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["allUsers"] });
+      qc.invalidateQueries({ queryKey: ["fullBackupData"] });
+      qc.invalidateQueries({ queryKey: ["platformStats"] });
+    },
+  });
+}
