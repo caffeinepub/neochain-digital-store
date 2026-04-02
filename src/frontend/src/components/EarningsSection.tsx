@@ -58,7 +58,7 @@ const SPIN_SEGMENTS = [
   { type: "win", amount: 100 },
   { type: "loss", amount: 0 },
 ];
-const WIN_INDICES = [0, 2, 4, 6];
+const _WIN_INDICES = [0, 2, 4, 6];
 const LOSS_INDICES = [1, 3, 5, 7];
 const SPIN_DURATION_MS = 3000;
 const SEGMENT_COLORS = [
@@ -282,17 +282,35 @@ export default function EarningsSection() {
       );
 
       // Determine win or loss
+      // Normal chance: ~20% win (1 in 5 spins)
+      // Win distribution: ₹30=50%, ₹50=20%, ₹70=20%, ₹100=10%
+      // After 4 consecutive losses: forced good win (₹50/₹70/₹100 only)
       let selectedIndex: number;
-      if (lossStreak >= 3) {
-        // Force a win
-        const winPool = WIN_INDICES;
-        selectedIndex = winPool[Math.floor(Math.random() * winPool.length)];
+      if (lossStreak >= 4) {
+        // Forced win with good reward after heavy losses: ₹50(40%), ₹70(35%), ₹100(25%)
+        const roll = Math.random();
+        if (roll < 0.4) {
+          selectedIndex = 2; // WIN ₹50
+        } else if (roll < 0.75) {
+          selectedIndex = 4; // WIN ₹70
+        } else {
+          selectedIndex = 6; // WIN ₹100
+        }
       } else {
-        // 50% win, 50% loss
-        const isWin = Math.random() < 0.5;
+        // 20% win overall, 80% loss
+        const isWin = Math.random() < 0.2;
         if (isWin) {
-          selectedIndex =
-            WIN_INDICES[Math.floor(Math.random() * WIN_INDICES.length)];
+          // Win distribution: ₹30=50%, ₹50=20%, ₹70=20%, ₹100=10%
+          const r = Math.random();
+          if (r < 0.5) {
+            selectedIndex = 0; // WIN ₹30
+          } else if (r < 0.7) {
+            selectedIndex = 2; // WIN ₹50
+          } else if (r < 0.9) {
+            selectedIndex = 4; // WIN ₹70
+          } else {
+            selectedIndex = 6; // WIN ₹100
+          }
         } else {
           selectedIndex =
             LOSS_INDICES[Math.floor(Math.random() * LOSS_INDICES.length)];
