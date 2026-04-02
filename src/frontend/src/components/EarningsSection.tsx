@@ -442,13 +442,13 @@ export default function EarningsSection() {
   };
 
   return (
-    <section className="px-4 pb-24">
+    <section className="px-4 pb-8">
       <div className="max-w-5xl mx-auto">
         {/* Section header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="text-center mb-6"
         >
           <div
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4"
@@ -476,7 +476,7 @@ export default function EarningsSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="rounded-2xl p-6 flex flex-col gap-4"
+            className="rounded-2xl p-6 flex flex-col gap-4 glow-green"
             style={{
               background: "rgba(7, 8, 26, 0.8)",
               border: loginBonusClaimed
@@ -561,7 +561,7 @@ export default function EarningsSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-2xl p-6 flex flex-col gap-4 items-center"
+            className="rounded-2xl p-6 flex flex-col gap-4 items-center glow-blue"
             style={{
               background: "rgba(7, 8, 26, 0.8)",
               border: "1px solid rgba(201, 60, 255, 0.35)",
@@ -864,7 +864,7 @@ export default function EarningsSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="rounded-2xl p-6 flex flex-col gap-4"
+            className="rounded-2xl p-6 flex flex-col gap-4 glow-yellow"
             style={{
               background: "rgba(7, 8, 26, 0.8)",
               border: "1px solid rgba(255, 193, 7, 0.3)",

@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Loader2,
   Lock,
+  MessageCircle,
   RefreshCw,
   Star,
   TrendingUp,
@@ -145,7 +146,7 @@ function MyDashboardSection() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
       {/* Section Divider */}
-      <div className="flex items-center gap-4 mb-12">
+      <div className="flex items-center gap-4 mb-6">
         <div
           className="flex-1 h-px"
           style={{ background: "rgba(123,77,255,0.2)" }}
@@ -532,13 +533,13 @@ function PlansSection({
   onBuyNow: (product: Product) => void;
 }) {
   return (
-    <section id="plans" className="px-4 pb-24">
+    <section id="plans" className="px-4 pb-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="text-center mb-14"
+        className="text-center mb-6"
       >
         <h2 className="font-display font-black text-4xl sm:text-5xl mb-4">
           <span className="gradient-text">Choose Your Plan</span>
@@ -550,7 +551,7 @@ function PlansSection({
       </motion.div>
 
       <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-2 gap-6 justify-items-center">
+        <div className="h-scroll-row">
           {PRODUCTS.map((product, i) => (
             <motion.div
               key={product.id.toString()}
@@ -559,8 +560,10 @@ function PlansSection({
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.5 }}
               whileHover={{ y: -8 }}
-              className="relative w-full rounded-2xl p-6 flex flex-col transition-shadow duration-300"
+              className="relative h-scroll-item rounded-2xl p-6 flex flex-col transition-shadow duration-300 glow-blue"
               style={{
+                minWidth: 260,
+                width: 260,
                 background:
                   "linear-gradient(135deg, oklch(0.12 0.04 280), oklch(0.09 0.02 260))",
                 border: `1px solid ${BORDER_COLORS[product.color]}`,
@@ -632,7 +635,7 @@ function PlansSection({
               <button
                 type="button"
                 onClick={() => onBuyNow(product)}
-                className="neon-btn-primary w-full py-3 text-sm font-semibold"
+                className="neon-btn-primary w-full py-3 text-sm font-semibold glow-blue"
                 data-ocid={`products.primary_button.${i + 1}`}
               >
                 Buy Now
@@ -650,17 +653,17 @@ function PlansSection({
 // ============================================================
 function HowItWorksSection() {
   return (
-    <section className="px-4 pb-24">
+    <section className="px-4 pb-8">
       <div className="max-w-4xl mx-auto">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="font-display font-black text-3xl sm:text-4xl text-center mb-14 gradient-text"
+          className="font-display font-black text-3xl sm:text-4xl text-center mb-6 gradient-text"
         >
           How It Works
         </motion.h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="h-scroll-row">
           {[
             {
               step: "01",
@@ -687,7 +690,8 @@ function HowItWorksSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.15 }}
-              className="neon-card p-6 text-center"
+              className="neon-card p-6 text-center h-scroll-item"
+              style={{ minWidth: 220 }}
             >
               <div
                 className={`font-display font-black text-5xl mb-4 ${TEXT_CLASSES[item.color]}`}
@@ -716,7 +720,7 @@ function HowItWorksSection() {
 // ============================================================
 function AboutSection() {
   return (
-    <section id="about" className="px-4 pb-24">
+    <section id="about" className="px-4 pb-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -795,7 +799,7 @@ function HowToEarnSection() {
   ];
 
   return (
-    <section id="how-to-earn" className="px-4 pb-24">
+    <section id="how-to-earn" className="px-4 pb-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -887,13 +891,13 @@ function FAQSection() {
   ];
 
   return (
-    <section id="faq" className="px-4 pb-24">
+    <section id="faq" className="px-4 pb-8">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-6"
         >
           <h2 className="font-display font-black text-3xl sm:text-4xl mb-4 gradient-text">
             Frequently Asked Questions
@@ -967,7 +971,7 @@ function FAQSection() {
 // ============================================================
 function CTASection({ onSignUp }: { onSignUp: () => void }) {
   return (
-    <section className="px-4 pb-32">
+    <section className="px-4 pb-8">
       <div className="max-w-3xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -1095,7 +1099,10 @@ function AboutTrustSection() {
   };
 
   return (
-    <section style={{ padding: "60px 20px", maxWidth: 900, margin: "0 auto" }}>
+    <section
+      id="about-trust"
+      style={{ padding: "40px 20px", maxWidth: 900, margin: "0 auto" }}
+    >
       <h2
         style={{
           textAlign: "center",
@@ -1339,7 +1346,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-12">
       {identity ? (
         // ===== LOGGED-IN LAYOUT =====
         <>
@@ -1436,7 +1443,7 @@ export default function LandingPage() {
         // ===== GUEST LAYOUT =====
         <>
           {/* Hero */}
-          <section className="relative flex flex-col items-center justify-center text-center px-4 py-24 sm:py-36 overflow-hidden">
+          <section className="relative flex flex-col items-center justify-center text-center px-4 py-16 sm:py-24 overflow-hidden">
             <div
               className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] opacity-20 pointer-events-none"
               style={{ background: "oklch(0.52 0.22 280)" }}
@@ -1564,6 +1571,19 @@ export default function LandingPage() {
           />
         )}
       </AnimatePresence>
+
+      {/* Floating WhatsApp / Support Button */}
+      <a
+        href="https://wa.me/"
+        target="_blank"
+        rel="noreferrer"
+        title="WhatsApp Support"
+        className="fixed bottom-6 left-4 z-40 bg-green-600 hover:bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg glow-green transition-colors cursor-pointer"
+        data-ocid="support.button"
+        aria-label="WhatsApp Support"
+      >
+        <MessageCircle className="w-5 h-5" />
+      </a>
     </div>
   );
 }
