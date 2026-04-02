@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   ArrowUpRight,
-  CheckCircle,
   Loader2,
   ShoppingCart,
   Wallet,
@@ -22,13 +21,13 @@ import { useWithdraw } from "../hooks/useQueries";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const WITHDRAW_METHODS = [
-  { name: "eSewa", icon: "💳", color: "cyan" },
-  { name: "Khalti", icon: "🟣", color: "violet" },
-  { name: "Paytm", icon: "💙", color: "cyan" },
-  { name: "PhonePe", icon: "📱", color: "violet" },
-  { name: "Google Pay", icon: "🎯", color: "cyan" },
-  { name: "SBI Bank", icon: "🏦", color: "magenta" },
-  { name: "HDFC Bank", icon: "🏛️", color: "magenta" },
+  { name: "eSewa", icon: "💳", color: "cyan", subtitle: "UPI / Wallet" },
+  { name: "Khalti", icon: "🟣", color: "violet", subtitle: "Digital Wallet" },
+  { name: "Paytm", icon: "💙", color: "cyan", subtitle: "UPI / Wallet" },
+  { name: "PhonePe", icon: "📱", color: "violet", subtitle: "UPI / Wallet" },
+  { name: "Google Pay", icon: "🎯", color: "emerald", subtitle: "UPI Payment" },
+  { name: "SBI Bank", icon: "🏦", color: "amber", subtitle: "Bank Transfer" },
+  { name: "HDFC Bank", icon: "🏛️", color: "rose", subtitle: "Bank Transfer" },
 ];
 
 const PLANS = [
@@ -55,6 +54,7 @@ function getColor(color: string) {
         text: "oklch(0.72 0.26 290)",
         bg: "rgba(123, 77, 255, 0.08)",
         activeBg: "rgba(123, 77, 255, 0.18)",
+        shadowGlow: "rgba(123, 77, 255, 0.25)",
       };
     case "magenta":
       return {
@@ -63,6 +63,34 @@ function getColor(color: string) {
         text: "oklch(0.72 0.28 315)",
         bg: "rgba(201, 60, 255, 0.08)",
         activeBg: "rgba(201, 60, 255, 0.18)",
+        shadowGlow: "rgba(201, 60, 255, 0.25)",
+      };
+    case "emerald":
+      return {
+        border: "rgba(52, 211, 153, 0.5)",
+        glow: "rgba(52, 211, 153, 0.2)",
+        text: "oklch(0.76 0.18 160)",
+        bg: "rgba(52, 211, 153, 0.07)",
+        activeBg: "rgba(52, 211, 153, 0.15)",
+        shadowGlow: "rgba(52, 211, 153, 0.25)",
+      };
+    case "amber":
+      return {
+        border: "rgba(251, 191, 36, 0.5)",
+        glow: "rgba(251, 191, 36, 0.2)",
+        text: "oklch(0.80 0.18 85)",
+        bg: "rgba(251, 191, 36, 0.06)",
+        activeBg: "rgba(251, 191, 36, 0.15)",
+        shadowGlow: "rgba(251, 191, 36, 0.22)",
+      };
+    case "rose":
+      return {
+        border: "rgba(251, 113, 133, 0.5)",
+        glow: "rgba(251, 113, 133, 0.2)",
+        text: "oklch(0.74 0.20 10)",
+        bg: "rgba(251, 113, 133, 0.07)",
+        activeBg: "rgba(251, 113, 133, 0.15)",
+        shadowGlow: "rgba(251, 113, 133, 0.22)",
       };
     default: // cyan
       return {
@@ -71,6 +99,7 @@ function getColor(color: string) {
         text: "oklch(0.82 0.18 210)",
         bg: "rgba(38, 214, 255, 0.08)",
         activeBg: "rgba(38, 214, 255, 0.18)",
+        shadowGlow: "rgba(38, 214, 255, 0.25)",
       };
   }
 }
@@ -348,23 +377,24 @@ export default function WalletModal({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="text-center py-6"
+                    className="text-center py-8"
                     data-ocid="withdraw.success_state"
                   >
                     <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3"
+                      className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"
                       style={{
                         background: "rgba(52,211,153,0.15)",
                         border: "1px solid rgba(52,211,153,0.4)",
+                        boxShadow: "0 0 24px rgba(52,211,153,0.2)",
                       }}
                     >
-                      <CheckCircle className="w-7 h-7 text-emerald-400" />
+                      ✓
                     </div>
-                    <h3 className="font-display font-bold text-xl text-emerald-400 mb-1.5">
+                    <h3 className="font-display font-bold text-2xl text-emerald-400 mb-2">
                       Request Submitted!
                     </h3>
-                    <p className="text-muted-foreground text-sm mb-1">
-                      Your withdrawal request has been submitted.
+                    <p className="text-muted-foreground mb-1 text-sm">
+                      Your withdrawal request has been submitted successfully.
                     </p>
                     <p className="text-muted-foreground text-xs">
                       Admin will process it within 24 hours.
@@ -376,7 +406,7 @@ export default function WalletModal({
                         setSelectedMethod(null);
                         setWFields(EMPTY_WITHDRAW);
                       }}
-                      className="neon-btn-primary mt-5 px-6 py-2 text-sm font-semibold"
+                      className="neon-btn-primary mt-6 px-8 py-2.5 text-sm font-semibold"
                       data-ocid="withdraw.done_button"
                     >
                       Done
@@ -415,7 +445,7 @@ export default function WalletModal({
                     </p>
 
                     <div
-                      className="grid grid-cols-3 gap-2"
+                      className="grid grid-cols-2 sm:grid-cols-3 gap-2.5"
                       data-ocid="withdraw.method_grid"
                     >
                       {WITHDRAW_METHODS.map((m) => {
@@ -425,20 +455,23 @@ export default function WalletModal({
                             key={m.name}
                             type="button"
                             onClick={() => handleSelectMethod(m)}
-                            className="group relative rounded-xl p-3 text-center transition-all hover:scale-[1.03] active:scale-[0.98]"
+                            className="group relative rounded-xl p-3.5 text-left transition-all hover:scale-[1.02] active:scale-[0.98]"
                             style={{
-                              background: c.bg,
+                              background: "rgba(255,255,255,0.03)",
                               border: `1px solid ${c.border}`,
-                              boxShadow: `0 2px 12px ${c.glow}`,
+                              boxShadow: `0 2px 10px ${c.shadowGlow}`,
                             }}
                             data-ocid="withdraw.method_button"
                           >
-                            <div className="text-xl mb-1.5">{m.icon}</div>
+                            <div className="text-2xl mb-2">{m.icon}</div>
                             <div
-                              className="font-display font-bold text-xs leading-tight"
+                              className="font-display font-bold text-sm leading-tight"
                               style={{ color: c.text }}
                             >
                               {m.name}
+                            </div>
+                            <div className="text-muted-foreground text-xs mt-0.5">
+                              {m.subtitle}
                             </div>
                           </button>
                         );
@@ -467,9 +500,9 @@ export default function WalletModal({
                           setWStep("select");
                           setSelectedMethod(null);
                         }}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        <ArrowLeft className="w-3.5 h-3.5" /> Back
+                        <ArrowLeft className="w-3.5 h-3.5" /> Back to methods
                       </button>
                       <div
                         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ml-auto"
@@ -477,6 +510,7 @@ export default function WalletModal({
                           background: getColor(selectedMethod.color).bg,
                           border: `1px solid ${getColor(selectedMethod.color).border}`,
                           color: getColor(selectedMethod.color).text,
+                          boxShadow: `0 0 8px ${getColor(selectedMethod.color).shadowGlow}`,
                         }}
                       >
                         <span>{selectedMethod.icon}</span>

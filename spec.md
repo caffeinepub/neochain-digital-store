@@ -1,42 +1,28 @@
-# NeoChain Digital Earning — UI Redesign v42
+# NeoChain Digital Earning
 
 ## Current State
-
-- Header: `sticky top-0 z-50` with `h-16`, dark bg (`rgba(7,8,26,0.92)`), violet bottom border. Contains logo, nav links, balance badge, Login/Sign Up buttons.
-- LandingPage: Long vertical scroll with separate sections stacked — Dashboard stats → Plans 2-col grid → EarningsSection → HowItWorks → SEO sections → FAQ → CTA → About/Trust
-- EarningsSection: 3-column grid with Login Bonus, Spin Wheel, Ad Tasks panels
-- index.css: OKLCH dark cyberpunk palette, `.neon-card`, `.neon-btn`, `.gradient-text`, `.stat-card`, etc.
-- No horizontal scroll sections; all sections are vertically stacked with large padding
-- No WhatsApp floating button
-- No quick nav links in header (Home | Products | Contact | Account)
+- Home screen (logged-in): Branding → MyDashboard → PlansSection (horizontal scroll cards, 260px wide each) → EarningsSection → AdSense
+- PlansSection: horizontal scroll of 4 large cards (260px wide, full description, bullet features), 'Choose Your Plan' heading, 'Buy Now' button on each
+- WalletModal: Two tabs — Withdraw and Buy Plan. Withdraw tab has method selection (3-col grid) → form → success flow. Buy Plan tab has a 2x2 grid of compact plan cards.
+- All sections have large padding, tall cards, verbose text
 
 ## Requested Changes (Diff)
 
 ### Add
-- Quick nav links in header: Home | Products | Contact | Account (desktop only, compact)
-- Floating WhatsApp/Support button (bottom-left, separate from existing support widget at bottom-right)
-- Horizontal scroll containers for: Plans section, HowItWorks section, AboutTrust section
-- Soft glow CSS classes for green (success/earning), red (alerts), blue (main UI), yellow (highlights), white (clean)
-- `scroll-behavior: smooth` on html element
+- Prominent, compact plan selector directly on the home screen replacing the current bulky horizontal scroll cards
+- Visual plan picker: 2x2 grid of smaller, cleaner plan cards with price, commission, and a single 'Select' button — feels like a real plan chooser
 
 ### Modify
-- **Header:** Ensure it is truly `position: fixed` (not just sticky), background `#0b0b0b`, add soft blue+green glow on bottom border (`box-shadow: 0 2px 20px rgba(0,200,100,0.15), 0 1px 0 rgba(0,150,255,0.2)`), keep height compact (h-12 or h-14)
-- **Section padding:** Reduce all section padding from `py-16/py-20` to `py-6/py-8`. Card spacing tight.
-- **Plans section:** Convert from 2×2 grid to horizontal scroll row (`flex overflow-x-auto snap-x snap-mandatory`). Each card min-width ~280px. Touch swipe enabled.
-- **Features/HowItWorks section:** Convert to horizontal scroll
-- **About/Trust section:** Already uses horizontal-scroll style; ensure proper snap scroll
-- **Dashboard stat cards:** Convert to 2×2 tight grid with smaller text
-- **All buttons:** Add soft color-coded glow (green for earn/success actions, blue for primary, yellow for highlights)
-- **All cards:** Add subtle glow border matching card type (neon-card styles enhanced)
-- **EarningsSection:** Reduce padding, make 3-col grid tighter on desktop
-- **Body/html:** Add `scroll-behavior: smooth`
+- **PlansSection on home**: Replace large 260px horizontal scroll cards with a tight 2x2 grid of compact plan cards (max 2 columns). Each card: plan name, price (bold), commission badge, short 1-line description, 'Choose Plan' button. Remove verbose bullet lists and long descriptions.
+- **WalletModal Withdraw tab**: Completely redesign to match the Buy Plan tab style — same method card grid (3-col, icon + name), same step flow (select → form → success), same visual language (colored glow borders, step indicators). Currently the withdraw tab already has a grid but it looks different from PaymentModal. Make them visually identical in structure and polish.
+- **All section spacing**: Reduce padding, margins, and card sizes across LandingPage sections (PlansSection, HowItWorks, FAQ, About, CTASection). Use tighter spacing (py-4 instead of py-8, compact headings).
+- **MyDashboardSection**: Reduce stat card sizes, tighten grid gaps, smaller heading text.
 
 ### Remove
-- Nothing removed — only additions and modifications
+- Nothing removed
 
 ## Implementation Plan
-
-1. **index.css** — Add `scroll-behavior: smooth`, add glow utility classes (`.glow-green`, `.glow-blue`, `.glow-red`, `.glow-yellow`, `.glow-white`), reduce default section padding variables
-2. **Navbar.tsx** — Change header to `fixed top-0` (already sticky, confirm fixed), change bg to `#0b0b0b`, add blue+green bottom glow border, add compact quick nav links (Home | Products | Contact | Account) for desktop, keep all existing functionality
-3. **LandingPage.tsx** — Add `pt-14` to main content to account for fixed header; convert PlansSection from grid to horizontal scroll; convert HowItWorksSection to horizontal scroll; reduce padding on all sections; apply glow classes to buttons and important cards; add floating WhatsApp button (links to support)
-4. **EarningsSection.tsx** — Reduce section padding, tighten card spacing, apply soft glow borders to panels
+1. Redesign `PlansSection` in LandingPage.tsx — 2x2 responsive grid, compact cards (~180px), remove bullet lists, short descriptions
+2. Redesign `WalletModal` withdraw method cards to exactly match the PaymentModal visual style — same card structure, same hover states, same glow colors
+3. Tighten spacing across all LandingPage sections — reduce py-8 → py-4/5, reduce heading sizes, reduce card padding
+4. Tighten MyDashboardSection stat cards — smaller text, tighter grid gap
