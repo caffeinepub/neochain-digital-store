@@ -1468,7 +1468,7 @@ function UserCredentialsModal({
                 (leave blank to keep unchanged)
               </span>
               <input
-                type="text"
+                type="password"
                 className="neon-input w-full px-3 py-2 text-sm mt-1.5"
                 placeholder="Enter new password"
                 value={newPassword}
@@ -1612,6 +1612,10 @@ function SiteSettingsTab() {
   const handleSave = () => {
     try {
       localStorage.setItem("siteSettings", JSON.stringify(settings));
+      // Dispatch storage event so other components (About & Trust section) refresh on same tab
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: "siteSettings" }),
+      );
       toast.success("Site settings saved!");
     } catch {
       toast.error("Failed to save settings");
@@ -1793,7 +1797,7 @@ function UserDatabaseTab() {
     try {
       const { data: freshData } = await refetchBackup();
       const data = (freshData ?? backupData) as BackupData | null | undefined;
-      if (data?.users && data.users.length >= 0) {
+      if (data?.users && data.users.length > 0) {
         const snapshot: BackupSnapshot = {
           id: `backup_${Date.now()}`,
           timestamp: Date.now(),
@@ -2477,9 +2481,26 @@ function UserDatabaseTab() {
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>("stats");
   const [viewTx, setViewTx] = useState<Transaction | null>(null);
+  const SESSION_ERROR_KEY = "neochain_admin_error_log";
+
   const [errorLog, setErrorLog] = useState<
     Array<{ time: string; msg: string; file: string; line: number }>
-  >([]);
+  >(() => {
+    // Persist error logs in sessionStorage so they accumulate across page navigations
+    try {
+      const saved = sessionStorage.getItem(SESSION_ERROR_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist error log to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SESSION_ERROR_KEY, JSON.stringify(errorLog));
+    } catch {}
+  }, [errorLog]);
 
   useEffect(() => {
     const handler = (event: ErrorEvent) => {
@@ -2566,7 +2587,7 @@ export default function AdminPanel() {
 
   const handleUpdateBalance = async (
     userPrincipal: string,
-    principalObj: any,
+    principalObj: Principal,
   ) => {
     const val = balanceInputs[userPrincipal];
     if (!val) return;
@@ -2582,7 +2603,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleUpdateRole = async (principalObj: any, role: UserRole) => {
+  const handleUpdateRole = async (principalObj: Principal, role: UserRole) => {
     try {
       await updateRole.mutateAsync({ user: principalObj, role });
       toast.success("Role updated");
@@ -2602,14 +2623,33 @@ export default function AdminPanel() {
     const updated: MethodData = { ...current, ...updates };
     // Save to localStorage FIRST — survives fresh deployments
     saveLocalQRData(name, updated);
+    // Store original data for rollback if needed
+    const originalData = current;
     try {
-      if (existing) await removePaymentMethod.mutateAsync(name);
+      if (existing) {
+        try {
+          await removePaymentMethod.mutateAsync(name);
+        } catch {
+          // If remove fails, still try to add (backend might not have it)
+        }
+      }
       await addPaymentMethod.mutateAsync({
         name,
         description: JSON.stringify(updated),
       });
       toast.success(`${name} updated`);
     } catch {
+      // addPaymentMethod failed after removePaymentMethod succeeded - try to restore original
+      if (existing && originalData) {
+        try {
+          await addPaymentMethod.mutateAsync({
+            name,
+            description: JSON.stringify(originalData),
+          });
+        } catch {
+          // Restore failed - data is still safe in localStorage
+        }
+      }
       toast.error(`Failed to update ${name} on backend — saved locally`);
     }
   };
@@ -2645,12 +2685,32 @@ export default function AdminPanel() {
   };
 
   // Filter transactions per tab
-  const purchaseTxs = (transactions ?? []).filter(
-    (tx) => String(tx.txType) === "purchase",
-  );
-  const depositTxs = (transactions ?? []).filter(
-    (tx) => String(tx.txType) === "deposit",
-  );
+  // Plan purchases are submitted via createDepositRequest, so txType is "deposit"
+  // We differentiate plan purchases from regular deposits by checking the notes field
+  // Plan purchases have notes.type === "plan_purchase"
+  const purchaseTxs = (transactions ?? []).filter((tx) => {
+    if (String(tx.txType) === "purchase") return true;
+    if (String(tx.txType) === "deposit" && tx.notes) {
+      try {
+        const parsed = JSON.parse(tx.notes);
+        return parsed.type === "plan_purchase";
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+  const depositTxs = (transactions ?? []).filter((tx) => {
+    if (String(tx.txType) !== "deposit") return false;
+    if (tx.notes) {
+      try {
+        const parsed = JSON.parse(tx.notes);
+        // Exclude plan purchases from deposits tab
+        if (parsed.type === "plan_purchase") return false;
+      } catch {}
+    }
+    return true;
+  });
   const withdrawalTxs = (transactions ?? []).filter(
     (tx) => String(tx.txType) === "withdrawal",
   );

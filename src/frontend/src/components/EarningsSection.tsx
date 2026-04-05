@@ -170,9 +170,14 @@ export default function EarningsSection() {
       setLoginBonusTime(nextMidnight.toLocaleTimeString());
       return;
     }
-    const updated = { ...userProfile, balance: userProfile.balance + 5n };
+    // Fix race condition: fetch fresh profile before updating balance
     actor
-      .saveCallerUserProfile(updated)
+      .getCallerUserProfile()
+      .then((freshProfile) => {
+        if (!freshProfile) return;
+        const updated = { ...freshProfile, balance: freshProfile.balance + 5n };
+        return actor.saveCallerUserProfile(updated);
+      })
       .then(() => {
         localStorage.setItem(key, today);
         qc.invalidateQueries({ queryKey: ["userProfile"] });
@@ -252,7 +257,7 @@ export default function EarningsSection() {
       return;
     }
 
-    // Paid spin: check balance
+    // Paid spin: check balance from current profile
     if (paid) {
       const bal = Number(userProfile.balance);
       if (bal < PAID_SPIN_COST) {
@@ -344,6 +349,12 @@ export default function EarningsSection() {
       // Normalize spin degree to avoid huge numbers
       setSpinDeg(targetDeg % 360);
 
+      // Fix race condition: always fetch fresh profile before updating balance
+      const freshProfile = await actor.getCallerUserProfile();
+      if (!freshProfile) {
+        throw new Error("Could not fetch profile");
+      }
+
       if (isWinResult) {
         // Win: credit amount, update streak
         localStorage.setItem(lossStreakKey, "0");
@@ -352,8 +363,8 @@ export default function EarningsSection() {
           ? BigInt(reward) - BigInt(PAID_SPIN_COST)
           : BigInt(reward);
         const updated = {
-          ...userProfile,
-          balance: userProfile.balance + balanceDelta,
+          ...freshProfile,
+          balance: freshProfile.balance + balanceDelta,
         };
         await actor.saveCallerUserProfile(updated);
         setSpinResult(reward);
@@ -367,8 +378,8 @@ export default function EarningsSection() {
         localStorage.setItem(lossStreakKey, String(newStreak));
         if (paid) {
           const updated = {
-            ...userProfile,
-            balance: userProfile.balance - BigInt(PAID_SPIN_COST),
+            ...freshProfile,
+            balance: freshProfile.balance - BigInt(PAID_SPIN_COST),
           };
           await actor.saveCallerUserProfile(updated);
         }
@@ -423,11 +434,14 @@ export default function EarningsSection() {
 
   const claimTask = async (task: AdTask) => {
     if (!userProfile || !actor) return;
-    const updated = {
-      ...userProfile,
-      balance: userProfile.balance + BigInt(task.rewardAmount),
-    };
     try {
+      // Fix race condition: fetch fresh profile before updating balance
+      const freshProfile = await actor.getCallerUserProfile();
+      if (!freshProfile) throw new Error("Profile not found");
+      const updated = {
+        ...freshProfile,
+        balance: freshProfile.balance + BigInt(task.rewardAmount),
+      };
       await actor.saveCallerUserProfile(updated);
       localStorage.setItem(
         `neochain_task_claimed_${principalText}_${task.id}`,
@@ -459,7 +473,7 @@ export default function EarningsSection() {
             }}
           >
             <Trophy className="w-3 h-3" />
-            Daily Earnings & Rewards
+            Daily Earnings &amp; Rewards
           </div>
           <h2 className="font-display font-black text-4xl sm:text-5xl gradient-text mb-3">
             Earnings Hub
@@ -959,19 +973,24 @@ export default function EarningsSection() {
                           Claim Reward
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => completeTask(task.id)}
+                        // Only show "Go to Task" link - no Auto Complete button in summary
+                        <a
+                          href={task.taskLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() =>
+                            setTimeout(() => completeTask(task.id), 2000)
+                          }
                           className="text-xs px-2 py-0.5 rounded-full font-semibold transition-all"
                           style={{
-                            background: "rgba(123, 77, 255, 0.15)",
-                            border: "1px solid rgba(123, 77, 255, 0.4)",
-                            color: "oklch(0.75 0.22 280)",
+                            background: "rgba(255, 193, 7, 0.1)",
+                            border: "1px solid rgba(255, 193, 7, 0.35)",
+                            color: "oklch(0.85 0.18 85)",
                           }}
-                          data-ocid="earnings.button"
+                          data-ocid="earnings.link"
                         >
-                          Auto Complete
-                        </button>
+                          Go to Task
+                        </a>
                       )}
                     </div>
                   );
@@ -982,6 +1001,7 @@ export default function EarningsSection() {
         </div>
 
         {/* ===== FULL AD TASKS LIST ===== */}
+        {/* No bottom border/margin to prevent white line */}
         {activeTasks.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1068,39 +1088,24 @@ export default function EarningsSection() {
                             Claim ₹{task.rewardAmount}
                           </button>
                         ) : (
-                          <>
-                            <a
-                              href={task.taskLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={() =>
-                                setTimeout(() => completeTask(task.id), 2000)
-                              }
-                              className="flex-1 py-2 rounded-xl text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-all"
-                              style={{
-                                background: "rgba(255, 193, 7, 0.1)",
-                                border: "1px solid rgba(255, 193, 7, 0.3)",
-                                color: "oklch(0.85 0.18 85)",
-                              }}
-                              data-ocid="earnings.link"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" /> Go to
-                              Task
-                            </a>
-                            <button
-                              type="button"
-                              onClick={() => completeTask(task.id)}
-                              className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all"
-                              style={{
-                                background: "rgba(123, 77, 255, 0.1)",
-                                border: "1px solid rgba(123, 77, 255, 0.3)",
-                                color: "oklch(0.75 0.22 280)",
-                              }}
-                              data-ocid="earnings.button"
-                            >
-                              Auto Complete
-                            </button>
-                          </>
+                          // Only "Go to Task" link - Auto Complete button removed per spec
+                          <a
+                            href={task.taskLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() =>
+                              setTimeout(() => completeTask(task.id), 2000)
+                            }
+                            className="flex-1 py-2 rounded-xl text-sm font-semibold text-center flex items-center justify-center gap-1.5 transition-all"
+                            style={{
+                              background: "rgba(255, 193, 7, 0.1)",
+                              border: "1px solid rgba(255, 193, 7, 0.3)",
+                              color: "oklch(0.85 0.18 85)",
+                            }}
+                            data-ocid="earnings.link"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Go to Task
+                          </a>
                         )}
                       </div>
                     </div>

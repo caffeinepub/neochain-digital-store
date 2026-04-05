@@ -7,6 +7,17 @@ export default function Footer() {
     typeof window !== "undefined" ? window.location.hostname : "";
   const caffeineLink = `https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`;
 
+  const supportEmail = (() => {
+    try {
+      const saved = localStorage.getItem("siteSettings");
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.email) return settings.email;
+      }
+    } catch {}
+    return "sandeepkarna71@gmail.com";
+  })();
+
   return (
     <footer
       className="mt-20 border-t"
@@ -17,9 +28,9 @@ export default function Footer() {
       }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-8 mb-10">
           {/* Brand */}
-          <div className="md:col-span-1">
+          <div className="md:col-span-2">
             <div className="flex items-center gap-2 mb-4">
               <img
                 src="/assets/generated/neochain-logo-transparent.dim_200x200.png"
@@ -33,8 +44,72 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              The future of digital commerce. Secure, fast, and decentralized.
+              NeoChain Digital Store — your trusted platform for digital earning
+              through referral commissions and daily rewards.
             </p>
+          </div>
+
+          {/* Quick Links — SEO critical for sitelinks */}
+          <div>
+            <h4 className="font-display font-semibold text-sm uppercase tracking-widest text-neon-cyan mb-4">
+              Quick Links
+            </h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li>
+                <Link
+                  to="/"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Home
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/login"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Login
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/register"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Register
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/products"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Products
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/mobile-apps"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Mobile Apps
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Contact
+                </Link>
+              </li>
+            </ul>
           </div>
 
           {/* Products */}
@@ -44,60 +119,39 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="/#plans"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Basic Plan
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/#plans"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Standard Plan
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/#plans"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Premium Plan
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/#plans"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Enterprise Plan
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Platform */}
-          <div>
-            <h4 className="font-display font-semibold text-sm uppercase tracking-widest text-neon-cyan mb-4">
-              Platform
-            </h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
                 <Link
-                  to="/"
+                  to="/products"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
-                  Home
+                  Starter Pack (₹1500)
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/dashboard"
+                  to="/products"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
-                  Dashboard
+                  Growth Pack (₹3000)
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/products"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Pro Pack (₹5000)
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/products"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Elite Pack (₹8000)
                 </Link>
               </li>
             </ul>
@@ -110,20 +164,39 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="mailto:support@neochain.store"
+                <Link
+                  to="/contact"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
                   Contact Us
-                </a>
+                </Link>
               </li>
               <li>
                 <a
-                  href="/#plans"
+                  href={`mailto:${supportEmail}`}
                   className="hover:text-foreground transition-colors"
                 >
-                  View Plans
+                  Email Support
                 </a>
+              </li>
+              <li>
+                <Link
+                  to="/dashboard"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/mobile-apps"
+                  className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
+                >
+                  Mobile Apps
+                </Link>
               </li>
             </ul>
           </div>
@@ -138,6 +211,7 @@ export default function Footer() {
                 <Link
                   to="/privacy"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
                   Privacy Policy
                 </Link>
@@ -146,6 +220,7 @@ export default function Footer() {
                 <Link
                   to="/refund"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
                   Refund Policy
                 </Link>
@@ -154,8 +229,9 @@ export default function Footer() {
                 <Link
                   to="/terms"
                   className="hover:text-foreground transition-colors"
+                  data-ocid="footer.link"
                 >
-                  Terms & Conditions
+                  Terms &amp; Conditions
                 </Link>
               </li>
             </ul>
@@ -166,7 +242,53 @@ export default function Footer() {
           className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground"
           style={{ borderTop: "1px solid rgba(123, 77, 255, 0.15)" }}
         >
-          <span>© {year} NeoChain Digital Store. All rights reserved.</span>
+          <span>
+            &copy; {year} NeoChain Digital Store. All rights reserved.
+          </span>
+          <nav className="flex flex-wrap gap-4" aria-label="Site navigation">
+            <Link
+              to="/"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Home
+            </Link>
+            <Link
+              to="/login"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Login
+            </Link>
+            <Link
+              to="/register"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Register
+            </Link>
+            <Link
+              to="/products"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Products
+            </Link>
+            <Link
+              to="/mobile-apps"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Mobile Apps
+            </Link>
+            <Link
+              to="/contact"
+              className="hover:text-cyan-400 transition-colors"
+              data-ocid="footer.link"
+            >
+              Contact
+            </Link>
+          </nav>
           <a
             href={caffeineLink}
             target="_blank"

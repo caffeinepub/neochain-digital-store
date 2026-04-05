@@ -61,12 +61,15 @@ export function useAllTransactions() {
       if (!actor) return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
       try {
         const result = await actor.getAllTransactions();
+        // Only cache if we got real data; don't return stale cache when backend says empty
         if (result && result.length > 0) {
           saveCache(TRANSACTIONS_CACHE_KEY, result);
           return result;
         }
-        return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
+        // Backend returned empty array — trust it, don't use stale cache
+        return result ?? [];
       } catch {
+        // Only fall back to cache on error (network issue, canister down etc.)
         return loadCache<Transaction>(TRANSACTIONS_CACHE_KEY);
       }
     },
@@ -83,12 +86,15 @@ export function useAllUsers() {
       if (!actor) return loadCache<UserProfile>(USERS_CACHE_KEY);
       try {
         const result = await actor.getAllUsers();
+        // Only cache if we got real data; don't return stale cache when backend says empty
         if (result && result.length > 0) {
           saveCache(USERS_CACHE_KEY, result);
           return result;
         }
-        return loadCache<UserProfile>(USERS_CACHE_KEY);
+        // Backend returned empty — trust it
+        return result ?? [];
       } catch {
+        // Only fall back to cache on error
         return loadCache<UserProfile>(USERS_CACHE_KEY);
       }
     },
@@ -130,12 +136,15 @@ export function usePaymentMethods() {
       if (!actor) return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
       try {
         const result = await actor.getAllPaymentMethods();
+        // Only cache if we got real data; don't return stale cache when backend says empty
         if (result && result.length > 0) {
           saveCache(PAYMENT_METHODS_CACHE_KEY, result);
           return result;
         }
-        return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
+        // Backend returned empty — trust it
+        return result ?? [];
       } catch {
+        // Only fall back to cache on error
         return loadCache<PaymentMethod>(PAYMENT_METHODS_CACHE_KEY);
       }
     },
@@ -154,9 +163,7 @@ export function useDeposit() {
       extraNotes,
     }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (actor as any).createDepositRequest(
+      return actor.createDepositRequest(
         amount,
         paymentMethod,
         extraNotes ?? "",
@@ -179,13 +186,7 @@ export function useWithdraw() {
       extraNotes,
     }: { amount: bigint; paymentMethod: string; extraNotes?: string }) => {
       if (!actor) throw new Error("Not connected");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (actor as any).requestWithdrawal(
-        amount,
-        paymentMethod,
-        extraNotes ?? "",
-      );
+      return actor.requestWithdrawal(amount, paymentMethod, extraNotes ?? "");
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["userProfile"] });

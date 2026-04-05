@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://neochain-digital-store-x9x.caffeine.xyz/sitemap.xml

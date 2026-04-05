@@ -794,7 +794,7 @@ function HowToEarnSection() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-14"
+          className="text-center mb-4"
         >
           <h2 className="font-display font-black text-xl sm:text-2xl mb-3 gradient-text">
             How to Earn with NeoChain Digital Store
@@ -1561,18 +1561,33 @@ export default function LandingPage() {
         )}
       </AnimatePresence>
 
-      {/* Floating WhatsApp / Support Button */}
-      <a
-        href="https://wa.me/"
-        target="_blank"
-        rel="noreferrer"
-        title="WhatsApp Support"
-        className="fixed bottom-6 left-4 z-40 bg-green-600 hover:bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg glow-green transition-colors cursor-pointer"
-        data-ocid="support.button"
-        aria-label="WhatsApp Support"
-      >
-        <MessageCircle className="w-5 h-5" />
-      </a>
+      {/* Floating WhatsApp / Support Button - only show if phone number configured */}
+      {(() => {
+        const whatsappNum = (() => {
+          try {
+            const saved = localStorage.getItem("siteSettings");
+            if (saved) {
+              const s = JSON.parse(saved);
+              return s.whatsapp ? s.whatsapp.replace(/\D/g, "") : "";
+            }
+          } catch {}
+          return "";
+        })();
+        if (!whatsappNum) return null;
+        return (
+          <a
+            href={`https://wa.me/${whatsappNum}`}
+            target="_blank"
+            rel="noreferrer"
+            title="WhatsApp Support"
+            className="fixed bottom-6 left-4 z-40 bg-green-600 hover:bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg glow-green transition-colors cursor-pointer"
+            data-ocid="support.button"
+            aria-label="WhatsApp Support"
+          >
+            <MessageCircle className="w-5 h-5" />
+          </a>
+        );
+      })()}
     </div>
   );
 }

@@ -1,28 +1,52 @@
-# NeoChain Digital Earning
+# NeoChain Digital Store
 
 ## Current State
-- Home screen (logged-in): Branding → MyDashboard → PlansSection (horizontal scroll cards, 260px wide each) → EarningsSection → AdSense
-- PlansSection: horizontal scroll of 4 large cards (260px wide, full description, bullet features), 'Choose Your Plan' heading, 'Buy Now' button on each
-- WalletModal: Two tabs — Withdraw and Buy Plan. Withdraw tab has method selection (3-col grid) → form → success flow. Buy Plan tab has a 2x2 grid of compact plan cards.
-- All sections have large padding, tall cards, verbose text
+The app is a full NeoChain Digital Earning platform (cyberpunk theme, dark purple-blue) with:
+- Single-page React app with client-side routing (hash or state-based)
+- Admin panel at `/admin`
+- Login/Register as modals (not dedicated pages)
+- Existing SEO meta tags in index.html (title, description, OG, Twitter Card, google-site-verification)
+- No dedicated pages for: Mobile Applications, Products, Contact
+- No JSON-LD structured data (Organization, WebSite, Sitelinks Searchbox)
+- No sitemap.xml or robots.txt
+- All existing features: Buy Plan, Withdraw, Spin, Referral, Support Widget, Admin Panel, etc.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Prominent, compact plan selector directly on the home screen replacing the current bulky horizontal scroll cards
-- Visual plan picker: 2x2 grid of smaller, cleaner plan cards with price, commission, and a single 'Select' button — feels like a real plan chooser
+- Dedicated route pages: `/login`, `/register`, `/mobile-apps`, `/products`, `/contact`
+- JSON-LD structured data blocks in index.html: Organization, WebSite (with SearchAction for Sitelinks), BreadcrumbList for nav links
+- sitemap.xml in public/ listing all 6 pages
+- robots.txt in public/ pointing to sitemap
+- SEO-optimized `<title>` and `<meta name="description">` per-page (via react-helmet or document.title in each page component)
+- Clear internal navigation links in header/footer linking to all 6 pages
+- Mobile Applications page: showcase of apps with download links or info
+- Products page: showcase of the 4 digital plans with SEO content
+- Contact page: contact form + contact info
+- Login page: standalone version of existing LoginModal content
+- Registration page: standalone version of existing RegisterModal content
 
 ### Modify
-- **PlansSection on home**: Replace large 260px horizontal scroll cards with a tight 2x2 grid of compact plan cards (max 2 columns). Each card: plan name, price (bold), commission badge, short 1-line description, 'Choose Plan' button. Remove verbose bullet lists and long descriptions.
-- **WalletModal Withdraw tab**: Completely redesign to match the Buy Plan tab style — same method card grid (3-col, icon + name), same step flow (select → form → success), same visual language (colored glow borders, step indicators). Currently the withdraw tab already has a grid but it looks different from PaymentModal. Make them visually identical in structure and polish.
-- **All section spacing**: Reduce padding, margins, and card sizes across LandingPage sections (PlansSection, HowItWorks, FAQ, About, CTASection). Use tighter spacing (py-4 instead of py-8, compact headings).
-- **MyDashboardSection**: Reduce stat card sizes, tighten grid gaps, smaller heading text.
+- `index.html` `<title>` → "NeoChain Digital Store - Official Website"
+- `index.html` `<meta name="description">` → "Best digital store with fast and secure services"
+- `index.html`: add JSON-LD scripts for Organization + WebSite + Sitelinks search
+- Header Navbar: add nav links to all 6 pages (Home, Login, Register, Mobile Apps, Products, Contact)
+- Footer: add internal links to all 6 pages
+- App.tsx routing: add routes for the new pages
 
 ### Remove
-- Nothing removed
+- Nothing (all existing features preserved)
 
 ## Implementation Plan
-1. Redesign `PlansSection` in LandingPage.tsx — 2x2 responsive grid, compact cards (~180px), remove bullet lists, short descriptions
-2. Redesign `WalletModal` withdraw method cards to exactly match the PaymentModal visual style — same card structure, same hover states, same glow colors
-3. Tighten spacing across all LandingPage sections — reduce py-8 → py-4/5, reduce heading sizes, reduce card padding
-4. Tighten MyDashboardSection stat cards — smaller text, tighter grid gap
+1. Update `index.html`: new title, description, and 3 JSON-LD `<script type="application/ld+json">` blocks (Organization, WebSite with SearchAction, SiteLinksSearchBox)
+2. Create `public/sitemap.xml` with all 6 page URLs
+3. Create `public/robots.txt` pointing to sitemap
+4. Create page components:
+   - `src/pages/LoginPage.tsx` — standalone login form using existing auth logic
+   - `src/pages/RegisterPage.tsx` — standalone registration form
+   - `src/pages/MobileAppsPage.tsx` — mobile apps showcase
+   - `src/pages/ProductsPage.tsx` — digital plans showcase
+   - `src/pages/ContactPage.tsx` — contact form + info
+5. Update `App.tsx` to add React Router routes for `/login`, `/register`, `/mobile-apps`, `/products`, `/contact`
+6. Update Navbar and Footer with internal links to all pages
+7. Each page sets `document.title` and a meta description dynamically for per-page SEO

@@ -65,7 +65,7 @@ function getBotResponse(msg: string): {
 
   if (/spin|wheel|free spin|daily spin/.test(m))
     return {
-      text: "Daily Spin info:\n• Har 24h mein 1 FREE spin\n• Uske baad ₹30 per spin\n• Login zaroori hai\n• 7th spin = ₹50 bonus\n\nSpin nahi ho raha? Page refresh karke try karo.",
+      text: "Daily Spin info:\n• Har 24h mein 1 FREE spin\n• Uske baad ₹30 per spin\n• Login zaroori hai\n• 4 baar laagataar loss ke baad guaranteed win (₹50/₹70/₹100)\n\nSpin nahi ho raha? Page refresh karke try karo.",
       quickReplies: [
         "Spin click nahi ho raha",
         "Spin hua par balance nahi aaya",
@@ -303,7 +303,7 @@ export default function CustomerSupportWidget() {
     addBotMessageWithTyping(response.text, response.quickReplies);
 
     // After 1 bot message show resolution prompt (unless response already ends with ?)
-    if (botMsgCount >= 1 && !showResolutionPrompt && ticketFlow === "idle") {
+    if (botMsgCount >= 2 && !showResolutionPrompt && ticketFlow === "idle") {
       setTimeout(() => {
         if (!response.text.endsWith("?")) {
           setShowResolutionPrompt(true);

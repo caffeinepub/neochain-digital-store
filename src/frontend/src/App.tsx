@@ -18,11 +18,18 @@ import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPanel from "./pages/AdminPanel";
+import ContactPage from "./pages/ContactPage";
 import Dashboard from "./pages/Dashboard";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
+import MobileAppsPage from "./pages/MobileAppsPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import ProductsPage from "./pages/ProductsPage";
 import RefundPage from "./pages/RefundPage";
+import RegisterPage from "./pages/RegisterPage";
 import TermsPage from "./pages/TermsPage";
+
+const ADMIN_SESSION_KEY = "neochain_admin_authenticated";
 
 function RootLayout() {
   const { identity, loginStatus } = useInternetIdentity();
@@ -32,22 +39,26 @@ function RootLayout() {
 
   const [showRegister, setShowRegister] = useState(false);
   const [signUpIntent, setSignUpIntent] = useState(false);
+  const [walletOpen, setWalletOpen] = useState(false);
 
-  // Auto-show register modal after login if no profile exists
+  // Standalone pages (/login, /register) handle their own auth UI
+  const isStandalonePage =
+    location.pathname === "/login" || location.pathname === "/register";
+
+  // Auto-show register modal after login if no profile exists (only on non-standalone pages)
   useEffect(() => {
-    if (!identity || !actor || isFetching) return;
+    if (!identity || !actor || isFetching || isStandalonePage) return;
     actor
       .getCallerUserProfile()
       .then((profile) => {
         if (profile === null) {
           setShowRegister(true);
         } else if (signUpIntent) {
-          // Already has profile, just clear intent
           setSignUpIntent(false);
         }
       })
       .catch(() => {});
-  }, [identity, actor, isFetching, signUpIntent]);
+  }, [identity, actor, isFetching, signUpIntent, isStandalonePage]);
 
   useEffect(() => {
     if (loginStatus === "idle") {
@@ -82,7 +93,12 @@ function RootLayout() {
 
   return (
     <div className="min-h-screen flex flex-col cyber-grid-bg">
-      <Navbar onSignUpClick={handleSignUpClick} />
+      <Navbar
+        onSignUpClick={handleSignUpClick}
+        onBuyPlan={() => setWalletOpen(true)}
+        walletOpen={walletOpen}
+        onWalletClose={() => setWalletOpen(false)}
+      />
       <main className="flex-1">
         <Outlet />
       </main>
@@ -111,9 +127,17 @@ function ProtectedDashboard() {
 }
 
 function ProtectedAdmin() {
-  const [adminAuthenticated, setAdminAuthenticated] = useState(false);
+  const [adminAuthenticated, setAdminAuthenticated] = useState(() => {
+    return sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
+  });
+
+  const handleLogin = () => {
+    sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+    setAdminAuthenticated(true);
+  };
+
   if (!adminAuthenticated) {
-    return <AdminLoginPage onLogin={() => setAdminAuthenticated(true)} />;
+    return <AdminLoginPage onLogin={handleLogin} />;
   }
   return <AdminPanel />;
 }
@@ -123,6 +147,31 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: LandingPage,
+});
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/register",
+  component: RegisterPage,
+});
+const productsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/products",
+  component: ProductsPage,
+});
+const mobileAppsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/mobile-apps",
+  component: MobileAppsPage,
+});
+const contactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/contact",
+  component: ContactPage,
 });
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -152,6 +201,11 @@ const termsRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
+  registerRoute,
+  productsRoute,
+  mobileAppsRoute,
+  contactRoute,
   dashboardRoute,
   adminRoute,
   privacyRoute,

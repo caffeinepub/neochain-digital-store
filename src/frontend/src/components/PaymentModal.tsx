@@ -412,9 +412,17 @@ export default function PaymentModal({ product, onClose }: Props) {
                         accept="image/*"
                         required
                         className="hidden"
-                        onChange={(e) =>
-                          setScreenshot(e.target.files?.[0] ?? null)
-                        }
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          if (file && file.size > 2 * 1024 * 1024) {
+                            toast.error(
+                              "Screenshot too large. Maximum 2MB allowed.",
+                            );
+                            e.target.value = "";
+                            return;
+                          }
+                          setScreenshot(file);
+                        }}
                       />
                     </label>
                   </div>

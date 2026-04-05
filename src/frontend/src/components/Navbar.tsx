@@ -1,6 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  Loader2,
   LogIn,
   LogOut,
   MoreVertical,
@@ -18,14 +17,24 @@ import WalletModal from "./WalletModal";
 
 interface NavbarProps {
   onSignUpClick?: () => void;
+  /** Called when user clicks "Buy Plan" in 3-dot menu — should open wallet with buy plan tab */
+  onBuyPlan?: () => void;
+  /** Controlled wallet open state (lifted from App.tsx) */
+  walletOpen?: boolean;
+  onWalletClose?: () => void;
 }
 
-export default function Navbar({ onSignUpClick }: NavbarProps) {
-  const { identity, login, clear, isLoggingIn } = useInternetIdentity();
+export default function Navbar({
+  onSignUpClick: _onSignUpClick,
+  onBuyPlan,
+  walletOpen: externalWalletOpen,
+  onWalletClose,
+}: NavbarProps) {
+  const { identity, clear } = useInternetIdentity();
   const { data: userProfile } = useUserProfile();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [walletOpen, setWalletOpen] = useState(false);
+  const [internalWalletOpen, setInternalWalletOpen] = useState(false);
   const [referralOpen, setReferralOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [paymentProduct, setPaymentProduct] = useState<{
@@ -36,7 +45,13 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
   } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const openWallet = () => setWalletOpen(true);
+  // Merge external and internal wallet open state
+  const walletOpen = externalWalletOpen ?? internalWalletOpen;
+  const openWallet = () => setInternalWalletOpen(true);
+  const closeWallet = () => {
+    setInternalWalletOpen(false);
+    onWalletClose?.();
+  };
 
   const navLinks = [
     { label: "Store", to: "/" },
@@ -64,9 +79,14 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
     return () => window.removeEventListener("mousedown", handleClick);
   }, [dropdownOpen]);
 
-  const handleSignUp = () => {
-    if (onSignUpClick) onSignUpClick();
-    login();
+  // "Buy Plan" in 3-dot menu: open WalletModal with plans tab active
+  const handleBuyPlanClick = () => {
+    setDropdownOpen(false);
+    if (onBuyPlan) {
+      onBuyPlan();
+    } else {
+      openWallet();
+    }
   };
 
   const dropdownItems = (
@@ -90,6 +110,30 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
           {link.label}
         </Link>
       ))}
+      <Link
+        to="/products"
+        className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        onClick={() => setDropdownOpen(false)}
+        data-ocid="nav.link"
+      >
+        📋 Products
+      </Link>
+      <Link
+        to="/mobile-apps"
+        className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        onClick={() => setDropdownOpen(false)}
+        data-ocid="nav.link"
+      >
+        📱 Mobile Apps
+      </Link>
+      <Link
+        to="/contact"
+        className="block px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
+        onClick={() => setDropdownOpen(false)}
+        data-ocid="nav.link"
+      >
+        📧 Contact
+      </Link>
       <div style={{ borderTop: "1px solid rgba(123,77,255,0.15)" }} />
       <button
         type="button"
@@ -113,14 +157,12 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
       >
         <span style={{ fontSize: 14 }}>📋</span> View Plans
       </button>
+      {/* Buy Plan opens WalletModal with Buy Plan tab, not navigate to /#plans */}
       <button
         type="button"
-        onClick={() => {
-          window.location.href = "/#plans";
-          setDropdownOpen(false);
-        }}
+        onClick={handleBuyPlanClick}
         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-foreground hover:bg-white/5 transition-colors"
-        data-ocid="nav.link"
+        data-ocid="nav.button"
       >
         <span style={{ fontSize: 14 }}>🛒</span> Buy Plan
       </button>
@@ -196,49 +238,82 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
             </Link>
 
             {/* Desktop Quick Nav Links — between logo and right-side buttons */}
-            <nav className="hidden lg:flex items-center gap-5 mx-4">
-              <a
-                href="/"
-                className="text-xs font-medium text-gray-400 hover:text-cyan-400 transition-colors"
+            <nav
+              className="hidden lg:flex items-center gap-5 mx-4"
+              aria-label="Main navigation"
+            >
+              <Link
+                to="/"
+                className={`text-xs font-medium transition-colors ${
+                  isActive("/")
+                    ? "text-cyan-400"
+                    : "text-gray-400 hover:text-cyan-400"
+                }`}
                 data-ocid="nav.link"
               >
                 Home
-              </a>
-              <a
-                href="/#plans"
-                className="text-xs font-medium text-gray-400 hover:text-cyan-400 transition-colors"
+              </Link>
+              <Link
+                to="/products"
+                className={`text-xs font-medium transition-colors ${
+                  isActive("/products")
+                    ? "text-cyan-400"
+                    : "text-gray-400 hover:text-cyan-400"
+                }`}
                 data-ocid="nav.link"
               >
                 Products
-              </a>
-              <a
-                href="/#about-trust"
-                className="text-xs font-medium text-gray-400 hover:text-cyan-400 transition-colors"
+              </Link>
+              <Link
+                to="/mobile-apps"
+                className={`text-xs font-medium transition-colors ${
+                  isActive("/mobile-apps")
+                    ? "text-cyan-400"
+                    : "text-gray-400 hover:text-cyan-400"
+                }`}
+                data-ocid="nav.link"
+              >
+                Mobile Apps
+              </Link>
+              <Link
+                to="/contact"
+                className={`text-xs font-medium transition-colors ${
+                  isActive("/contact")
+                    ? "text-cyan-400"
+                    : "text-gray-400 hover:text-cyan-400"
+                }`}
                 data-ocid="nav.link"
               >
                 Contact
-              </a>
+              </Link>
               {isLoggedIn ? (
                 <Link
                   to="/dashboard"
-                  className="text-xs font-medium text-gray-400 hover:text-cyan-400 transition-colors"
+                  className={`text-xs font-medium transition-colors ${
+                    isActive("/dashboard")
+                      ? "text-cyan-400"
+                      : "text-gray-400 hover:text-cyan-400"
+                  }`}
                   data-ocid="nav.link"
                 >
                   Account
                 </Link>
               ) : (
-                <button
-                  type="button"
-                  onClick={login}
-                  className="text-xs font-medium text-gray-400 hover:text-cyan-400 transition-colors"
+                <Link
+                  to="/login"
+                  className={`text-xs font-medium transition-colors ${
+                    isActive("/login")
+                      ? "text-cyan-400"
+                      : "text-gray-400 hover:text-cyan-400"
+                  }`}
                   data-ocid="nav.link"
                 >
                   Account
-                </button>
+                </Link>
               )}
             </nav>
 
-            {/* Desktop Nav (existing) */}
+            {/* Tablet Nav (md-only) */}
             <nav className="hidden md:flex lg:hidden items-center gap-4">
               {navLinks.map((link) => (
                 <Link
@@ -347,10 +422,8 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
               {!isLoggedIn && (
                 <div className="flex flex-col items-end gap-0.5">
                   <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={login}
-                      disabled={isLoggingIn}
+                    <Link
+                      to="/login"
                       className="neon-btn flex items-center gap-1.5 px-3 py-1.5"
                       style={{
                         borderColor: "rgba(38, 214, 255, 0.5)",
@@ -359,31 +432,17 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
                       }}
                       data-ocid="nav.login_button"
                     >
-                      {isLoggingIn ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <LogIn className="w-3 h-3" />
-                      )}
-                      <span className="text-xs font-semibold">
-                        {isLoggingIn ? "..." : "Login"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSignUp}
-                      disabled={isLoggingIn}
+                      <LogIn className="w-3 h-3" />
+                      <span className="text-xs font-semibold">Login</span>
+                    </Link>
+                    <Link
+                      to="/register"
                       className="neon-btn-primary flex items-center gap-1.5 px-3 py-1.5"
                       data-ocid="nav.signup_button"
                     >
-                      {isLoggingIn ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <UserPlus className="w-3 h-3" />
-                      )}
-                      <span className="text-xs font-semibold">
-                        {isLoggingIn ? "..." : "Sign Up"}
-                      </span>
-                    </button>
+                      <UserPlus className="w-3 h-3" />
+                      <span className="text-xs font-semibold">Sign Up</span>
+                    </Link>
                   </div>
                   <button
                     type="button"
@@ -402,10 +461,10 @@ export default function Navbar({ onSignUpClick }: NavbarProps) {
 
       <WalletModal
         open={walletOpen}
-        onClose={() => setWalletOpen(false)}
+        onClose={closeWallet}
         userProfile={userProfile ?? null}
         onBuyPlan={(plan) => {
-          setWalletOpen(false);
+          closeWallet();
           setPaymentProduct(plan);
         }}
       />

@@ -105,13 +105,35 @@ export default function RegisterModal({
       localStorage.removeItem(RATE_LIMIT_TIME_KEY);
       toast.success(`Welcome to NeoChain, ${profile.username}!`);
       onRegistered(profile);
-    } catch {
-      const attempts = Number(localStorage.getItem(RATE_LIMIT_KEY) ?? "0") + 1;
-      localStorage.setItem(RATE_LIMIT_KEY, String(attempts));
-      if (attempts >= MAX_REG_ATTEMPTS) {
-        localStorage.setItem(RATE_LIMIT_TIME_KEY, String(Date.now()));
-        setLockoutRemaining(REG_LOCKOUT_MS);
-        toast.error("Too many attempts. Please wait 2 minutes.");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      // Only apply rate limiting for specific "already registered" or username errors
+      // Not for network or server errors
+      const isRateLimitableError =
+        errMsg.toLowerCase().includes("already registered") ||
+        errMsg.toLowerCase().includes("username") ||
+        errMsg.toLowerCase().includes("already exists") ||
+        errMsg.toLowerCase().includes("user already");
+      if (isRateLimitableError) {
+        const attempts =
+          Number(localStorage.getItem(RATE_LIMIT_KEY) ?? "0") + 1;
+        localStorage.setItem(RATE_LIMIT_KEY, String(attempts));
+        if (attempts >= MAX_REG_ATTEMPTS) {
+          localStorage.setItem(RATE_LIMIT_TIME_KEY, String(Date.now()));
+          setLockoutRemaining(REG_LOCKOUT_MS);
+          toast.error("Too many attempts. Please wait 2 minutes.");
+          return;
+        }
+      }
+      if (
+        errMsg.toLowerCase().includes("already registered") ||
+        errMsg.toLowerCase().includes("already exists")
+      ) {
+        toast.error(
+          "This account is already registered. Please login instead.",
+        );
+      } else if (errMsg.toLowerCase().includes("username")) {
+        toast.error("Username already taken. Please choose another.");
       } else {
         toast.error("Registration failed. Please try again.");
       }
