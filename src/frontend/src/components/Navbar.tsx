@@ -6,6 +6,7 @@ import {
   TrendingUp,
   UserPlus,
   Wallet,
+  Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -146,6 +147,15 @@ export default function Navbar({
       >
         <Wallet className="w-4 h-4 neon-text-cyan" /> Wallet
       </button>
+      <Link
+        to="/earn"
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm hover:bg-white/5 transition-colors font-semibold"
+        style={{ color: "oklch(0.75 0.22 160)" }}
+        onClick={() => setDropdownOpen(false)}
+        data-ocid="nav.earn_money_dropdown_btn"
+      >
+        <Zap className="w-4 h-4" /> Earn Money
+      </Link>{" "}
       <button
         type="button"
         onClick={() => {
@@ -309,6 +319,22 @@ export default function Navbar({
                   data-ocid="nav.link"
                 >
                   Account
+                </Link>
+              )}
+              {/* Earn Money button — desktop nav */}
+              {isLoggedIn && (
+                <Link
+                  to="/earn"
+                  className="neon-btn flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold glow-green"
+                  style={{
+                    borderColor: "rgba(0,230,118,0.5)",
+                    color: "oklch(0.75 0.22 160)",
+                    boxShadow: "0 0 14px rgba(0,230,118,0.25)",
+                  }}
+                  data-ocid="nav.earn_money_btn"
+                >
+                  <Zap className="w-3 h-3" />
+                  Earn Money
                 </Link>
               )}
             </nav>

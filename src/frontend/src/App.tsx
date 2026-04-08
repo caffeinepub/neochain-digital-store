@@ -20,15 +20,19 @@ import AdminLoginPage from "./pages/AdminLoginPage";
 import AdminPanel from "./pages/AdminPanel";
 import ContactPage from "./pages/ContactPage";
 import Dashboard from "./pages/Dashboard";
+import EarnPage from "./pages/EarnPage";
 import LandingPage from "./pages/LandingPage";
+import LeaderboardPage from "./pages/LeaderboardPage";
 import LoginPage from "./pages/LoginPage";
 import MobileAppsPage from "./pages/MobileAppsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import ProductsPage from "./pages/ProductsPage";
+import ReferralPage from "./pages/ReferralPage";
 import RefundPage from "./pages/RefundPage";
 import RegisterPage from "./pages/RegisterPage";
 import SitemapPage from "./pages/SitemapPage";
 import TermsPage from "./pages/TermsPage";
+import WalletPage from "./pages/WalletPage";
 
 const ADMIN_SESSION_KEY = "neochain_admin_authenticated";
 
@@ -127,6 +131,46 @@ function ProtectedDashboard() {
   return <Dashboard />;
 }
 
+function ProtectedEarn() {
+  const { identity, isInitializing } = useInternetIdentity();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isInitializing && !identity) navigate({ to: "/" });
+  }, [identity, isInitializing, navigate]);
+  if (isInitializing || !identity) return null;
+  return <EarnPage />;
+}
+
+function ProtectedWallet() {
+  const { identity, isInitializing } = useInternetIdentity();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isInitializing && !identity) navigate({ to: "/" });
+  }, [identity, isInitializing, navigate]);
+  if (isInitializing || !identity) return null;
+  return <WalletPage />;
+}
+
+function ProtectedReferral() {
+  const { identity, isInitializing } = useInternetIdentity();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isInitializing && !identity) navigate({ to: "/" });
+  }, [identity, isInitializing, navigate]);
+  if (isInitializing || !identity) return null;
+  return <ReferralPage />;
+}
+
+function ProtectedLeaderboard() {
+  const { identity, isInitializing } = useInternetIdentity();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!isInitializing && !identity) navigate({ to: "/" });
+  }, [identity, isInitializing, navigate]);
+  if (isInitializing || !identity) return null;
+  return <LeaderboardPage />;
+}
+
 function ProtectedAdmin() {
   const [adminAuthenticated, setAdminAuthenticated] = useState(() => {
     return sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
@@ -204,6 +248,26 @@ const sitemapRoute = createRoute({
   path: "/sitemap",
   component: SitemapPage,
 });
+const earnRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/earn",
+  component: ProtectedEarn,
+});
+const walletRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/wallet",
+  component: ProtectedWallet,
+});
+const referralRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/referral",
+  component: ProtectedReferral,
+});
+const leaderboardRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/leaderboard",
+  component: ProtectedLeaderboard,
+});
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -218,6 +282,10 @@ const routeTree = rootRoute.addChildren([
   refundRoute,
   termsRoute,
   sitemapRoute,
+  earnRoute,
+  walletRoute,
+  referralRoute,
+  leaderboardRoute,
 ]);
 const router = createRouter({ routeTree });
 

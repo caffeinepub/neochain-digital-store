@@ -12,10 +12,14 @@ export const PaymentMethod = IDL.Record({
   'name' : IDL.Text,
   'description' : IDL.Text,
 });
-export const UserRole = IDL.Variant({
-  'admin' : IDL.Null,
-  'user' : IDL.Null,
-  'guest' : IDL.Null,
+export const AdminSettings = IDL.Record({
+  'withdrawalEnabled' : IDL.Bool,
+  'dailyCapINR' : IDL.Nat,
+  'dailyCapNPR' : IDL.Nat,
+  'earningEnabled' : IDL.Bool,
+  'taskRewardMax' : IDL.Nat,
+  'taskRewardMin' : IDL.Nat,
+  'rewardMultiplier' : IDL.Nat,
 });
 export const ProductPlan = IDL.Record({
   'id' : IDL.Nat,
@@ -47,8 +51,12 @@ export const TransactionStatus = IDL.Variant({
   'rejected' : IDL.Null,
 });
 export const TransactionType = IDL.Variant({
+  'task_reward' : IDL.Null,
   'deposit' : IDL.Null,
+  'vip_purchase' : IDL.Null,
+  'spin_reward' : IDL.Null,
   'withdrawal' : IDL.Null,
+  'login_bonus' : IDL.Null,
   'referral_bonus' : IDL.Null,
   'purchase' : IDL.Null,
 });
@@ -63,19 +71,86 @@ export const Transaction = IDL.Record({
   'amount' : IDL.Nat,
 });
 export const UserProfile = IDL.Record({
+  'lastLoginDate' : IDL.Int,
+  'isFrozen' : IDL.Bool,
   'referralCode' : IDL.Text,
+  'frozenReason' : IDL.Opt(IDL.Text),
   'username' : IDL.Text,
   'balance' : IDL.Nat,
+  'loginStreak' : IDL.Nat,
   'user' : IDL.Principal,
+  'weeklyPoints' : IDL.Nat,
   'referralEarnings' : IDL.Nat,
   'referredBy' : IDL.Opt(IDL.Principal),
+  'deviceId' : IDL.Opt(IDL.Text),
+  'totalPoints' : IDL.Nat,
+  'vipTier' : IDL.Opt(IDL.Text),
+  'vipExpiry' : IDL.Opt(IDL.Int),
 });
+export const EarningRecord = IDL.Record({
+  'dailyEarned' : IDL.Nat,
+  'consecutiveLosses' : IDL.Nat,
+  'streakDays' : IDL.Nat,
+  'lastEarnDate' : IDL.Int,
+  'vipTier' : IDL.Opt(IDL.Text),
+  'lastTaskTime' : IDL.Int,
+});
+export const FraudLog = IDL.Record({
+  'action' : IDL.Text,
+  'user' : IDL.Principal,
+  'timestamp' : IDL.Int,
+  'reason' : IDL.Text,
+});
+export const BackupData = IDL.Record({
+  'snapshotTime' : Time,
+  'users' : IDL.Vec(UserProfile),
+  'totalUsers' : IDL.Nat,
+  'transactions' : IDL.Vec(Transaction),
+  'totalBalance' : IDL.Nat,
+});
+export const LeaderboardEntry = IDL.Record({
+  'username' : IDL.Text,
+  'user' : IDL.Principal,
+  'weeklyPoints' : IDL.Nat,
+  'vipTier' : IDL.Opt(IDL.Text),
+});
+export const VIPStatus = IDL.Variant({
+  'pending' : IDL.Null,
+  'approved' : IDL.Null,
+  'rejected' : IDL.Null,
+});
+export const VIPPurchase = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : VIPStatus,
+  'userName' : IDL.Text,
+  'paymentMethod' : IDL.Text,
+  'userEmail' : IDL.Text,
+  'tier' : IDL.Text,
+  'user' : IDL.Principal,
+  'submittedAt' : IDL.Int,
+  'currency' : IDL.Text,
+  'amount' : IDL.Nat,
+  'screenshot' : IDL.Text,
+});
+export const Notification = IDL.Record({
+  'id' : IDL.Nat,
+  'notifType' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'isRead' : IDL.Bool,
+  'message' : IDL.Text,
+});
+export const SpinHistory = IDL.Record({
+  'totalWon' : IDL.Nat,
+  'totalSpins' : IDL.Nat,
+  'lastSpin' : IDL.Int,
+});
+export const UserRole = IDL.Variant({ 'admin' : IDL.Null, 'user' : IDL.Null });
 
 export const idlService = IDL.Service({
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addPaymentMethod' : IDL.Func([PaymentMethod], [], []),
   'approveTransaction' : IDL.Func([IDL.Nat], [], []),
-  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'approveVIPPurchase' : IDL.Func([IDL.Nat], [], []),
+  'assignAdmin' : IDL.Func([], [IDL.Bool], []),
   'createDepositRequest' : IDL.Func(
       [IDL.Nat, IDL.Text, IDL.Text],
       [IDL.Nat],
@@ -86,17 +161,44 @@ export const idlService = IDL.Service({
       [IDL.Nat],
       [],
     ),
+  'freezeUser' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+  'getAdminSettings' : IDL.Func([], [AdminSettings], ['query']),
   'getAllPaymentMethods' : IDL.Func([], [IDL.Vec(PaymentMethod)], ['query']),
   'getAllProductPlans' : IDL.Func([], [IDL.Vec(ProductPlan)], ['query']),
   'getAllSupportTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
   'getAllTransactions' : IDL.Func([], [IDL.Vec(Transaction)], ['query']),
   'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
-  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getEarningRecord' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(EarningRecord)],
+      ['query'],
+    ),
+  'getFraudLogs' : IDL.Func([], [IDL.Vec(FraudLog)], ['query']),
+  'getFullBackupData' : IDL.Func([], [BackupData], ['query']),
+  'getLeaderboard' : IDL.Func([], [IDL.Vec(LeaderboardEntry)], ['query']),
   'getMyTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
+  'getMyVIPPurchases' : IDL.Func([], [IDL.Vec(VIPPurchase)], ['query']),
+  'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
+  'getPlatformRevenue' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'revenue' : IDL.Nat,
+          'canWithdraw' : IDL.Bool,
+          'payouts' : IDL.Nat,
+        }),
+      ],
+      ['query'],
+    ),
   'getPlatformStats' : IDL.Func(
       [],
       [IDL.Record({ 'totalUsers' : IDL.Nat, 'totalTransactions' : IDL.Nat })],
+      ['query'],
+    ),
+  'getSpinHistory' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(SpinHistory)],
       ['query'],
     ),
   'getUserBalance' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
@@ -105,15 +207,36 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
-  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'getVIPPurchases' : IDL.Func([], [IDL.Vec(VIPPurchase)], ['query']),
+  'isUserFrozen' : IDL.Func([IDL.Principal], [IDL.Bool], ['query']),
+  'isWithdrawalAllowed' : IDL.Func([], [IDL.Bool], ['query']),
+  'markNotificationRead' : IDL.Func([IDL.Nat], [], []),
   'processPurchase' : IDL.Func([IDL.Nat, IDL.Opt(IDL.Text)], [IDL.Nat], []),
+  'recordFraudLog' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+  'recordSpinResult' : IDL.Func([IDL.Text, IDL.Nat], [], []),
   'registerUser' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [UserProfile], []),
   'rejectTransaction' : IDL.Func([IDL.Nat], [], []),
+  'rejectVIPPurchase' : IDL.Func([IDL.Nat], [], []),
   'removePaymentMethod' : IDL.Func([IDL.Text], [], []),
   'replyToTicket' : IDL.Func([IDL.Nat, IDL.Text], [], []),
   'requestWithdrawal' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [IDL.Nat], []),
   'resolveTicket' : IDL.Func([IDL.Nat], [], []),
+  'restoreUserBalances' : IDL.Func(
+      [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Nat))],
+      [IDL.Nat],
+      [],
+    ),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'sendAdminNotification' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+  'submitVIPPurchase' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
+  'unfreezeUser' : IDL.Func([IDL.Principal], [], []),
+  'updateAdminSettings' : IDL.Func([AdminSettings], [], []),
+  'updateDailyEarning' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
+  'updatePlatformRevenue' : IDL.Func([IDL.Nat], [], []),
   'updateUserBalance' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
   'updateUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
 });
@@ -125,10 +248,14 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'description' : IDL.Text,
   });
-  const UserRole = IDL.Variant({
-    'admin' : IDL.Null,
-    'user' : IDL.Null,
-    'guest' : IDL.Null,
+  const AdminSettings = IDL.Record({
+    'withdrawalEnabled' : IDL.Bool,
+    'dailyCapINR' : IDL.Nat,
+    'dailyCapNPR' : IDL.Nat,
+    'earningEnabled' : IDL.Bool,
+    'taskRewardMax' : IDL.Nat,
+    'taskRewardMin' : IDL.Nat,
+    'rewardMultiplier' : IDL.Nat,
   });
   const ProductPlan = IDL.Record({
     'id' : IDL.Nat,
@@ -160,8 +287,12 @@ export const idlFactory = ({ IDL }) => {
     'rejected' : IDL.Null,
   });
   const TransactionType = IDL.Variant({
+    'task_reward' : IDL.Null,
     'deposit' : IDL.Null,
+    'vip_purchase' : IDL.Null,
+    'spin_reward' : IDL.Null,
     'withdrawal' : IDL.Null,
+    'login_bonus' : IDL.Null,
     'referral_bonus' : IDL.Null,
     'purchase' : IDL.Null,
   });
@@ -176,19 +307,86 @@ export const idlFactory = ({ IDL }) => {
     'amount' : IDL.Nat,
   });
   const UserProfile = IDL.Record({
+    'lastLoginDate' : IDL.Int,
+    'isFrozen' : IDL.Bool,
     'referralCode' : IDL.Text,
+    'frozenReason' : IDL.Opt(IDL.Text),
     'username' : IDL.Text,
     'balance' : IDL.Nat,
+    'loginStreak' : IDL.Nat,
     'user' : IDL.Principal,
+    'weeklyPoints' : IDL.Nat,
     'referralEarnings' : IDL.Nat,
     'referredBy' : IDL.Opt(IDL.Principal),
+    'deviceId' : IDL.Opt(IDL.Text),
+    'totalPoints' : IDL.Nat,
+    'vipTier' : IDL.Opt(IDL.Text),
+    'vipExpiry' : IDL.Opt(IDL.Int),
   });
+  const EarningRecord = IDL.Record({
+    'dailyEarned' : IDL.Nat,
+    'consecutiveLosses' : IDL.Nat,
+    'streakDays' : IDL.Nat,
+    'lastEarnDate' : IDL.Int,
+    'vipTier' : IDL.Opt(IDL.Text),
+    'lastTaskTime' : IDL.Int,
+  });
+  const FraudLog = IDL.Record({
+    'action' : IDL.Text,
+    'user' : IDL.Principal,
+    'timestamp' : IDL.Int,
+    'reason' : IDL.Text,
+  });
+  const BackupData = IDL.Record({
+    'snapshotTime' : Time,
+    'users' : IDL.Vec(UserProfile),
+    'totalUsers' : IDL.Nat,
+    'transactions' : IDL.Vec(Transaction),
+    'totalBalance' : IDL.Nat,
+  });
+  const LeaderboardEntry = IDL.Record({
+    'username' : IDL.Text,
+    'user' : IDL.Principal,
+    'weeklyPoints' : IDL.Nat,
+    'vipTier' : IDL.Opt(IDL.Text),
+  });
+  const VIPStatus = IDL.Variant({
+    'pending' : IDL.Null,
+    'approved' : IDL.Null,
+    'rejected' : IDL.Null,
+  });
+  const VIPPurchase = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : VIPStatus,
+    'userName' : IDL.Text,
+    'paymentMethod' : IDL.Text,
+    'userEmail' : IDL.Text,
+    'tier' : IDL.Text,
+    'user' : IDL.Principal,
+    'submittedAt' : IDL.Int,
+    'currency' : IDL.Text,
+    'amount' : IDL.Nat,
+    'screenshot' : IDL.Text,
+  });
+  const Notification = IDL.Record({
+    'id' : IDL.Nat,
+    'notifType' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'isRead' : IDL.Bool,
+    'message' : IDL.Text,
+  });
+  const SpinHistory = IDL.Record({
+    'totalWon' : IDL.Nat,
+    'totalSpins' : IDL.Nat,
+    'lastSpin' : IDL.Int,
+  });
+  const UserRole = IDL.Variant({ 'admin' : IDL.Null, 'user' : IDL.Null });
   
   return IDL.Service({
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addPaymentMethod' : IDL.Func([PaymentMethod], [], []),
     'approveTransaction' : IDL.Func([IDL.Nat], [], []),
-    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'approveVIPPurchase' : IDL.Func([IDL.Nat], [], []),
+    'assignAdmin' : IDL.Func([], [IDL.Bool], []),
     'createDepositRequest' : IDL.Func(
         [IDL.Nat, IDL.Text, IDL.Text],
         [IDL.Nat],
@@ -199,17 +397,44 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Nat],
         [],
       ),
+    'freezeUser' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+    'getAdminSettings' : IDL.Func([], [AdminSettings], ['query']),
     'getAllPaymentMethods' : IDL.Func([], [IDL.Vec(PaymentMethod)], ['query']),
     'getAllProductPlans' : IDL.Func([], [IDL.Vec(ProductPlan)], ['query']),
     'getAllSupportTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
     'getAllTransactions' : IDL.Func([], [IDL.Vec(Transaction)], ['query']),
     'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
-    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getEarningRecord' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(EarningRecord)],
+        ['query'],
+      ),
+    'getFraudLogs' : IDL.Func([], [IDL.Vec(FraudLog)], ['query']),
+    'getFullBackupData' : IDL.Func([], [BackupData], ['query']),
+    'getLeaderboard' : IDL.Func([], [IDL.Vec(LeaderboardEntry)], ['query']),
     'getMyTickets' : IDL.Func([], [IDL.Vec(SupportTicket)], ['query']),
+    'getMyVIPPurchases' : IDL.Func([], [IDL.Vec(VIPPurchase)], ['query']),
+    'getNotifications' : IDL.Func([], [IDL.Vec(Notification)], ['query']),
+    'getPlatformRevenue' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'revenue' : IDL.Nat,
+            'canWithdraw' : IDL.Bool,
+            'payouts' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
     'getPlatformStats' : IDL.Func(
         [],
         [IDL.Record({ 'totalUsers' : IDL.Nat, 'totalTransactions' : IDL.Nat })],
+        ['query'],
+      ),
+    'getSpinHistory' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(SpinHistory)],
         ['query'],
       ),
     'getUserBalance' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
@@ -218,10 +443,16 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
-    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'getVIPPurchases' : IDL.Func([], [IDL.Vec(VIPPurchase)], ['query']),
+    'isUserFrozen' : IDL.Func([IDL.Principal], [IDL.Bool], ['query']),
+    'isWithdrawalAllowed' : IDL.Func([], [IDL.Bool], ['query']),
+    'markNotificationRead' : IDL.Func([IDL.Nat], [], []),
     'processPurchase' : IDL.Func([IDL.Nat, IDL.Opt(IDL.Text)], [IDL.Nat], []),
+    'recordFraudLog' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+    'recordSpinResult' : IDL.Func([IDL.Text, IDL.Nat], [], []),
     'registerUser' : IDL.Func([IDL.Text, IDL.Opt(IDL.Text)], [UserProfile], []),
     'rejectTransaction' : IDL.Func([IDL.Nat], [], []),
+    'rejectVIPPurchase' : IDL.Func([IDL.Nat], [], []),
     'removePaymentMethod' : IDL.Func([IDL.Text], [], []),
     'replyToTicket' : IDL.Func([IDL.Nat, IDL.Text], [], []),
     'requestWithdrawal' : IDL.Func(
@@ -230,7 +461,22 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'resolveTicket' : IDL.Func([IDL.Nat], [], []),
+    'restoreUserBalances' : IDL.Func(
+        [IDL.Vec(IDL.Tuple(IDL.Principal, IDL.Nat))],
+        [IDL.Nat],
+        [],
+      ),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'sendAdminNotification' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+    'submitVIPPurchase' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Nat],
+        [],
+      ),
+    'unfreezeUser' : IDL.Func([IDL.Principal], [], []),
+    'updateAdminSettings' : IDL.Func([AdminSettings], [], []),
+    'updateDailyEarning' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
+    'updatePlatformRevenue' : IDL.Func([IDL.Nat], [], []),
     'updateUserBalance' : IDL.Func([IDL.Principal, IDL.Nat], [], []),
     'updateUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   });

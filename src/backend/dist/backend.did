@@ -1,0 +1,226 @@
+type VIPStatus = 
+ variant {
+   approved;
+   pending;
+   rejected;
+ };
+type VIPPurchase = 
+ record {
+   amount: nat;
+   currency: text;
+   id: nat;
+   paymentMethod: text;
+   screenshot: text;
+   status: VIPStatus;
+   submittedAt: int;
+   tier: text;
+   user: principal;
+   userEmail: text;
+   userName: text;
+ };
+type UserRole = 
+ variant {
+   admin;
+   user;
+ };
+type UserProfile = 
+ record {
+   balance: nat;
+   deviceId: opt text;
+   frozenReason: opt text;
+   isFrozen: bool;
+   lastLoginDate: int;
+   loginStreak: nat;
+   referralCode: text;
+   referralEarnings: nat;
+   referredBy: opt principal;
+   totalPoints: nat;
+   user: principal;
+   username: text;
+   vipExpiry: opt int;
+   vipTier: opt text;
+   weeklyPoints: nat;
+ };
+type TransactionType = 
+ variant {
+   deposit;
+   login_bonus;
+   purchase;
+   referral_bonus;
+   spin_reward;
+   task_reward;
+   vip_purchase;
+   withdrawal;
+ };
+type TransactionStatus = 
+ variant {
+   approved;
+   completed;
+   pending;
+   rejected;
+ };
+type Transaction = 
+ record {
+   amount: nat;
+   createdAt: Time;
+   id: nat;
+   notes: text;
+   paymentMethod: text;
+   status: TransactionStatus;
+   txType: TransactionType;
+   user: principal;
+ };
+type Time = int;
+type TicketStatus = 
+ variant {
+   open;
+   resolved;
+ };
+type SupportTicket = 
+ record {
+   adminRepliedAt: opt Time;
+   adminReply: text;
+   createdAt: Time;
+   guestEmail: text;
+   guestName: text;
+   problemSummary: text;
+   status: TicketStatus;
+   ticketId: nat;
+   userId: opt principal;
+ };
+type SpinHistory = 
+ record {
+   lastSpin: int;
+   totalSpins: nat;
+   totalWon: nat;
+ };
+type ProductPlan = 
+ record {
+   description: text;
+   features: vec text;
+   id: nat;
+   name: text;
+   price: nat;
+ };
+type PaymentMethod = 
+ record {
+   description: text;
+   name: text;
+ };
+type Notification = 
+ record {
+   createdAt: int;
+   id: nat;
+   isRead: bool;
+   message: text;
+   notifType: text;
+ };
+type LeaderboardEntry = 
+ record {
+   user: principal;
+   username: text;
+   vipTier: opt text;
+   weeklyPoints: nat;
+ };
+type FraudLog = 
+ record {
+   action: text;
+   reason: text;
+   timestamp: int;
+   user: principal;
+ };
+type EarningRecord = 
+ record {
+   consecutiveLosses: nat;
+   dailyEarned: nat;
+   lastEarnDate: int;
+   lastTaskTime: int;
+   streakDays: nat;
+   vipTier: opt text;
+ };
+type BackupData = 
+ record {
+   snapshotTime: Time;
+   totalBalance: nat;
+   totalUsers: nat;
+   transactions: vec Transaction;
+   users: vec UserProfile;
+ };
+type AdminSettings = 
+ record {
+   dailyCapINR: nat;
+   dailyCapNPR: nat;
+   earningEnabled: bool;
+   rewardMultiplier: nat;
+   taskRewardMax: nat;
+   taskRewardMin: nat;
+   withdrawalEnabled: bool;
+ };
+service : {
+  addPaymentMethod: (pm: PaymentMethod) -> ();
+  approveTransaction: (transactionId: nat) -> ();
+  approveVIPPurchase: (id: nat) -> ();
+  assignAdmin: () -> (bool);
+  createDepositRequest: (amount: nat, paymentMethod: text, extraNotes:
+   text) -> (nat);
+  createSupportTicket: (guestName: text, guestEmail: text, problemSummary:
+   text) -> (nat);
+  freezeUser: (user: principal, reason: text) -> ();
+  getAdminSettings: () -> (AdminSettings) query;
+  getAllPaymentMethods: () -> (vec PaymentMethod) query;
+  getAllProductPlans: () -> (vec ProductPlan) query;
+  getAllSupportTickets: () -> (vec SupportTicket) query;
+  getAllTransactions: () -> (vec Transaction) query;
+  getAllUsers: () -> (vec UserProfile) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getEarningRecord: (user: principal) -> (opt EarningRecord) query;
+  getFraudLogs: () -> (vec FraudLog) query;
+  getFullBackupData: () -> (BackupData) query;
+  getLeaderboard: () -> (vec LeaderboardEntry) query;
+  getMyTickets: () -> (vec SupportTicket) query;
+  getMyVIPPurchases: () -> (vec VIPPurchase) query;
+  getNotifications: () -> (vec Notification) query;
+  getPlatformRevenue: () ->
+   (record {
+      canWithdraw: bool;
+      payouts: nat;
+      revenue: nat;
+    }) query;
+  getPlatformStats: () ->
+   (record {
+      totalTransactions: nat;
+      totalUsers: nat;
+    }) query;
+  getSpinHistory: (user: principal) -> (opt SpinHistory) query;
+  getUserBalance: (address: principal) -> (nat) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  getVIPPurchases: () -> (vec VIPPurchase) query;
+  isUserFrozen: (user: principal) -> (bool) query;
+  isWithdrawalAllowed: () -> (bool) query;
+  markNotificationRead: (id: nat) -> ();
+  processPurchase: (productId: nat, referralCode: opt text) -> (nat);
+  recordFraudLog: (user: principal, reason: text) -> ();
+  recordSpinResult: (result: text, amountWon: nat) -> ();
+  registerUser: (username: text, referralCode: opt text) -> (UserProfile);
+  rejectTransaction: (transactionId: nat) -> ();
+  rejectVIPPurchase: (id: nat) -> ();
+  removePaymentMethod: (name: text) -> ();
+  replyToTicket: (ticketId: nat, reply: text) -> ();
+  requestWithdrawal: (amount: nat, paymentMethod: text, extraNotes: text) ->
+   (nat);
+  resolveTicket: (ticketId: nat) -> ();
+  restoreUserBalances: (updates: vec record {
+                                       principal;
+                                       nat;
+                                     }) -> (nat);
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  sendAdminNotification: (user: principal, message: text) -> ();
+  submitVIPPurchase: (tier: text, amount: nat, currency: text, paymentMethod:
+   text, screenshot: text, userName: text, userEmail: text) -> (nat);
+  unfreezeUser: (user: principal) -> ();
+  updateAdminSettings: (settings: AdminSettings) -> ();
+  updateDailyEarning: (user: principal, amount: nat) -> ();
+  updatePlatformRevenue: (amount: nat) -> ();
+  updateUserBalance: (user: principal, newBalance: nat) -> ();
+  updateUserRole: (user: principal, role: UserRole) -> ();
+}

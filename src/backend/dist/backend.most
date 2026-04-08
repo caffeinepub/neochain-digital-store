@@ -1,0 +1,365 @@
+// Version: 3.0.0
+type AdminSettings__402608957 =
+  {
+    dailyCapINR : Nat;
+    dailyCapNPR : Nat;
+    earningEnabled : Bool;
+    rewardMultiplier : Nat;
+    taskRewardMax : Nat;
+    taskRewardMin : Nat;
+    withdrawalEnabled : Bool
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type EarningRecord__4576500 =
+  {
+    consecutiveLosses : Nat;
+    dailyEarned : Nat;
+    lastEarnDate : Int;
+    lastTaskTime : Int;
+    streakDays : Nat;
+    vipTier : ?Text
+  };
+type FraudLog__816602054 =
+  {action : Text; reason : Text; timestamp : Int; user : Principal};
+type Int__270357528 = Int__616954475;
+type Int__616954475 = Int;
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Notification__879889657 =
+  {
+    createdAt : Int;
+    id : Nat;
+    isRead : Bool;
+    message : Text;
+    notifType : Text
+  };
+type OldAccessControlState__841599830 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__605269027<Principal, OldUserRole__889293160>
+  };
+type OldSupportTicket__250682711 =
+  {
+    adminRepliedAt : ?Time__900049286;
+    adminReply : Text;
+    createdAt : Time__900049286;
+    guestEmail : Text;
+    guestName : Text;
+    problemSummary : Text;
+    status : OldTicketStatus__374569976;
+    ticketId : Nat;
+    userId : ?Principal
+  };
+type OldTicketStatus__374569976 = {#open; #resolved};
+type OldTransactionStatus__70327580 =
+  {#approved; #completed; #pending; #rejected};
+type OldTransactionType__927121552 =
+  {#deposit; #purchase; #referral_bonus; #withdrawal};
+type OldTransaction__963748675 =
+  {
+    amount : Nat;
+    createdAt : Time__900049286;
+    id : Nat;
+    notes : Text;
+    paymentMethod : Text;
+    status : OldTransactionStatus__70327580;
+    txType : OldTransactionType__927121552;
+    user : Principal
+  };
+type OldUserProfile__416069324 =
+  {
+    balance : Nat;
+    referralCode : Text;
+    referralEarnings : Nat;
+    referredBy : ?Principal;
+    user : Principal;
+    username : Text
+  };
+type OldUserRole__889293160 = {#admin; #guest; #user};
+type PaymentMethod__68978920 = {description : Text; name : Text};
+type ProductPlan__646131643 =
+  {description : Text; features : [Text]; id : Nat; name : Text; price : Nat};
+type SpinHistory__99508984 =
+  {lastSpin : Int; totalSpins : Nat; totalWon : Nat};
+type SupportTicket__805008716 =
+  {
+    adminRepliedAt : ?Time__900049286;
+    adminReply : Text;
+    createdAt : Time__900049286;
+    guestEmail : Text;
+    guestName : Text;
+    problemSummary : Text;
+    status : TicketStatus__84214631;
+    ticketId : Nat;
+    userId : ?Principal
+  };
+type TicketStatus__84214631 = {#open; #resolved};
+type Time__796480547 = Int__270357528;
+type Time__900049286 = Time__796480547;
+type TransactionStatus__426104033 =
+  {#approved; #completed; #pending; #rejected};
+type TransactionType__767491300 =
+  {
+    #deposit;
+    #login_bonus;
+    #purchase;
+    #referral_bonus;
+    #spin_reward;
+    #task_reward;
+    #vip_purchase;
+    #withdrawal
+  };
+type Transaction__865268250 =
+  {
+    amount : Nat;
+    createdAt : Time__900049286;
+    id : Nat;
+    notes : Text;
+    paymentMethod : Text;
+    status : TransactionStatus__426104033;
+    txType : TransactionType__767491300;
+    user : Principal
+  };
+type UserProfile__491224006 =
+  {
+    balance : Nat;
+    deviceId : ?Text;
+    frozenReason : ?Text;
+    isFrozen : Bool;
+    lastLoginDate : Int;
+    loginStreak : Nat;
+    referralCode : Text;
+    referralEarnings : Nat;
+    referredBy : ?Principal;
+    totalPoints : Nat;
+    user : Principal;
+    username : Text;
+    vipExpiry : ?Int;
+    vipTier : ?Text;
+    weeklyPoints : Nat
+  };
+type UserRole__599675725 = {#admin; #user};
+type VIPPurchase__723000554 =
+  {
+    amount : Nat;
+    currency : Text;
+    id : Nat;
+    paymentMethod : Text;
+    screenshot : Text;
+    status : VIPStatus__992176870;
+    submittedAt : Int;
+    tier : Text;
+    user : Principal;
+    userEmail : Text;
+    userName : Text
+  };
+type VIPStatus__992176870 = {#approved; #pending; #rejected};
+actor ({
+  in accessControlState : OldAccessControlState__841599830;
+  stable var adminAssigned : Bool;
+  stable var adminPrincipal : ?Principal;
+  stable var adminSettings :
+    {
+      dailyCapINR : Nat;
+      dailyCapNPR : Nat;
+      earningEnabled : Bool;
+      rewardMultiplier : Nat;
+      taskRewardMax : Nat;
+      taskRewardMin : Nat;
+      withdrawalEnabled : Bool
+    };
+  stable earningRecords :
+    {
+      var root : Node__46230540<Principal, EarningRecord__4576500>;
+      var size : Nat__490723111
+    };
+  stable fraudLogs :
+    {
+      var root : Node__46230540<Principal, FraudLog__816602054>;
+      var size : Nat__490723111
+    };
+  stable var nextNotifId : Nat;
+  in var nextProductId : ?Nat;
+  in var nextTicketId : Nat;
+  in var nextTransactionId : Nat;
+  stable var nextVIPId : Nat;
+  stable notifications :
+    {
+      var root :
+        Node__46230540<Principal, List__415060402<Notification__879889657>>;
+      var size : Nat__490723111
+    };
+  in paymentMethods : Map__605269027<Text, {description : Text; name : Text}>;
+  stable var platformPayouts : Nat;
+  stable var platformRevenue : Nat;
+  stable productPlans :
+    {
+      var root : Node__46230540<Nat, ProductPlan__646131643>;
+      var size : Nat__490723111
+    };
+  in referralCodes : Map__605269027<Text, Principal>;
+  stable spinHistories :
+    {
+      var root : Node__46230540<Principal, SpinHistory__99508984>;
+      var size : Nat__490723111
+    };
+  in var stableAdminAssigned : Bool;
+  stable var stableAdminPrincipal : ?Principal;
+  stable var stableAdminSettings : ?AdminSettings__402608957;
+  stable var stableEarningRecords : [(Principal, EarningRecord__4576500)];
+  stable var stableFraudLogs : [(Principal, FraudLog__816602054)];
+  in var stableNextTicketId : Nat;
+  in var stableNextTransactionId : Nat;
+  stable var stableNextVIPId : Nat;
+  stable var stableNotifications : [(Principal, [Notification__879889657])];
+  in var stablePaymentMethods : [(Text, {description : Text; name : Text})];
+  stable var stablePlatformPayouts : Nat;
+  stable var stablePlatformRevenue : Nat;
+  in var stableReferralCodes : [(Text, Principal)];
+  stable var stableSpinHistories : [(Principal, SpinHistory__99508984)];
+  in var stableSupportTickets : [(Nat, OldSupportTicket__250682711)];
+  in var stableTransactions : [(Nat, OldTransaction__963748675)];
+  in var stableUserProfiles : [(Principal, OldUserProfile__416069324)];
+  in var stableUserRoles : [(Principal, OldUserRole__889293160)];
+  stable var stableVIPPurchases : [(Nat, VIPPurchase__723000554)];
+  in supportTickets : Map__605269027<Nat, OldSupportTicket__250682711>;
+  stable taskCompletions :
+    {
+      var root : Node__46230540<Principal, List__415060402<Int>>;
+      var size : Nat__490723111
+    };
+  in transactions : Map__605269027<Nat, OldTransaction__963748675>;
+  in userProfiles : Map__605269027<Principal, OldUserProfile__416069324>;
+  stable userReferralEarnings :
+    {var root : Node__46230540<Principal, Nat>; var size : Nat__490723111};
+  stable userRoles :
+    {
+      var root : Node__46230540<Principal, UserRole__599675725>;
+      var size : Nat__490723111
+    };
+  stable vipPurchases :
+    {
+      var root : Node__46230540<Nat, VIPPurchase__723000554>;
+      var size : Nat__490723111
+    }
+}, {
+  stable var adminAssigned : Bool;
+  stable var adminPrincipal : ?Principal;
+  stable var adminSettings :
+    {
+      dailyCapINR : Nat;
+      dailyCapNPR : Nat;
+      earningEnabled : Bool;
+      rewardMultiplier : Nat;
+      taskRewardMax : Nat;
+      taskRewardMin : Nat;
+      withdrawalEnabled : Bool
+    };
+  stable earningRecords :
+    {
+      var root : Node__46230540<Principal, EarningRecord__4576500>;
+      var size : Nat__490723111
+    };
+  stable fraudLogs :
+    {
+      var root : Node__46230540<Principal, FraudLog__816602054>;
+      var size : Nat__490723111
+    };
+  stable var nextNotifId : Nat;
+  stable var nextTicketId : Nat;
+  stable var nextTransactionId : Nat;
+  stable var nextVIPId : Nat;
+  stable notifications :
+    {
+      var root :
+        Node__46230540<Principal, List__415060402<Notification__879889657>>;
+      var size : Nat__490723111
+    };
+  stable paymentMethods :
+    {
+      var root : Node__46230540<Text, PaymentMethod__68978920>;
+      var size : Nat__490723111
+    };
+  stable var platformPayouts : Nat;
+  stable var platformRevenue : Nat;
+  stable productPlans :
+    {
+      var root : Node__46230540<Nat, ProductPlan__646131643>;
+      var size : Nat__490723111
+    };
+  stable referralCodes :
+    {var root : Node__46230540<Text, Principal>; var size : Nat__490723111};
+  stable spinHistories :
+    {
+      var root : Node__46230540<Principal, SpinHistory__99508984>;
+      var size : Nat__490723111
+    };
+  stable var stableAdminAssigned : Bool;
+  stable var stableAdminPrincipal : ?Principal;
+  stable var stableAdminSettings : ?AdminSettings__402608957;
+  stable var stableEarningRecords : [(Principal, EarningRecord__4576500)];
+  stable var stableFraudLogs : [(Principal, FraudLog__816602054)];
+  stable var stableNextTicketId : Nat;
+  stable var stableNextTransactionId : Nat;
+  stable var stableNextVIPId : Nat;
+  stable var stableNotifications : [(Principal, [Notification__879889657])];
+  stable var stablePaymentMethods : [(Text, PaymentMethod__68978920)];
+  stable var stablePlatformPayouts : Nat;
+  stable var stablePlatformRevenue : Nat;
+  stable var stableReferralCodes : [(Text, Principal)];
+  stable var stableSpinHistories : [(Principal, SpinHistory__99508984)];
+  stable var stableSupportTickets : [(Nat, SupportTicket__805008716)];
+  stable var stableTransactions : [(Nat, Transaction__865268250)];
+  stable var stableUserProfiles : [(Principal, UserProfile__491224006)];
+  stable var stableUserRoles : [(Principal, UserRole__599675725)];
+  stable var stableVIPPurchases : [(Nat, VIPPurchase__723000554)];
+  stable supportTickets :
+    {
+      var root : Node__46230540<Nat, SupportTicket__805008716>;
+      var size : Nat__490723111
+    };
+  stable taskCompletions :
+    {
+      var root : Node__46230540<Principal, List__415060402<Int>>;
+      var size : Nat__490723111
+    };
+  stable transactions :
+    {
+      var root : Node__46230540<Nat, Transaction__865268250>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable userReferralEarnings :
+    {var root : Node__46230540<Principal, Nat>; var size : Nat__490723111};
+  stable userRoles :
+    {
+      var root : Node__46230540<Principal, UserRole__599675725>;
+      var size : Nat__490723111
+    };
+  stable vipPurchases :
+    {
+      var root : Node__46230540<Nat, VIPPurchase__723000554>;
+      var size : Nat__490723111
+    }
+}) ;

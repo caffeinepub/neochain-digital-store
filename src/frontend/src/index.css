@@ -334,6 +334,64 @@
     box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
   }
 
+  /* ===== EARNING-SPECIFIC GLOWS ===== */
+  .glow-success {
+    box-shadow: 0 0 16px rgba(0, 230, 118, 0.4) !important;
+    border-color: rgba(0, 230, 118, 0.5) !important;
+  }
+
+  .glow-gold {
+    box-shadow: 0 0 16px rgba(255, 200, 0, 0.4) !important;
+    border-color: rgba(255, 200, 0, 0.5) !important;
+  }
+
+  .glow-cyan-bright {
+    box-shadow: 0 0 20px rgba(38, 214, 255, 0.5) !important;
+    border-color: rgba(38, 214, 255, 0.6) !important;
+  }
+
+  .glow-violet-bright {
+    box-shadow: 0 0 20px rgba(123, 77, 255, 0.5) !important;
+    border-color: rgba(123, 77, 255, 0.6) !important;
+  }
+
+  /* ===== EARNING CARD VARIANTS ===== */
+  .neon-card-earn {
+    background: rgba(10, 8, 30, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(0, 230, 118, 0.35);
+    box-shadow: 0 0 40px rgba(0, 230, 118, 0.08), inset 0 1px 0
+      rgba(0, 230, 118, 0.15);
+  }
+
+  .neon-card-wallet {
+    background: rgba(10, 8, 30, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(38, 214, 255, 0.35);
+    box-shadow: 0 0 40px rgba(38, 214, 255, 0.08), inset 0 1px 0
+      rgba(38, 214, 255, 0.15);
+  }
+
+  .neon-card-referral {
+    background: rgba(10, 8, 30, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(123, 77, 255, 0.35);
+    box-shadow: 0 0 40px rgba(123, 77, 255, 0.08), inset 0 1px 0
+      rgba(123, 77, 255, 0.15);
+  }
+
+  .neon-card-leaderboard {
+    background: rgba(10, 8, 30, 0.7);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 200, 0, 0.25);
+    box-shadow: 0 0 40px rgba(255, 200, 0, 0.06), inset 0 1px 0
+      rgba(255, 200, 0, 0.1);
+  }
+
   /* ===== HORIZONTAL SCROLL ROW ===== */
   .h-scroll-row {
     display: flex;

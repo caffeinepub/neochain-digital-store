@@ -36,15 +36,6 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
-    headers: {
-      "/sitemap.xml": {
-        "Content-Type": "application/xml; charset=utf-8",
-        "X-Content-Type-Options": "nosniff",
-      },
-      "/robots.txt": {
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    },
   },
   plugins: [
     environment("all", { prefix: "CANISTER_" }),
@@ -64,6 +55,6 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src", import.meta.url)),
       },
     ],
-    dedupe: ["@dfinity/agent"],
+    dedupe: ["@dfinity/agent"]
   },
 });

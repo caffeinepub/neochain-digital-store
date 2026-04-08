@@ -86,6 +86,8 @@ export default {
         "neon-violet": "0 0 20px oklch(0.52 0.22 280 / 0.5), 0 0 40px oklch(0.52 0.22 280 / 0.2)",
         "neon-magenta": "0 0 20px oklch(0.58 0.25 305 / 0.5), 0 0 40px oklch(0.58 0.25 305 / 0.2)",
         "neon-card": "0 0 40px oklch(0.82 0.18 210 / 0.08), 0 0 80px oklch(0.52 0.22 280 / 0.06)",
+        "glow-success": "0 0 20px rgba(0, 230, 118, 0.3), 0 0 40px rgba(0, 230, 118, 0.1)",
+        "glow-gold": "0 0 20px rgba(255, 200, 0, 0.3), 0 0 40px rgba(255, 200, 0, 0.1)",
       },
       keyframes: {
         "accordion-down": {
@@ -104,12 +106,22 @@ export default {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-12px)" },
         },
+        "earn-pulse": {
+          "0%, 100%": { boxShadow: "0 0 16px rgba(0, 230, 118, 0.3)" },
+          "50%": { boxShadow: "0 0 32px rgba(0, 230, 118, 0.6)" },
+        },
+        "badge-bounce": {
+          "0%, 100%": { transform: "scale(1)" },
+          "50%": { transform: "scale(1.05)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 3s ease-in-out infinite",
         float: "float 6s ease-in-out infinite",
+        "earn-pulse": "earn-pulse 2.5s ease-in-out infinite",
+        "badge-bounce": "badge-bounce 0.8s ease-in-out infinite",
       },
     },
   },

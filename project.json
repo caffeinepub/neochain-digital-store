@@ -1,0 +1,27 @@
+{
+  "overview": "NeoChain Digital Store is a cyberpunk-themed digital product storefront and earning platform for India and Nepal. Users can buy digital plans, earn daily rewards through tasks and spin wheel, refer friends for commissions, and manage withdrawals — all under strict anti-fraud and profit-first controls.",
+  "features": [
+    "Digital product plans (₹1500–₹8000) with referral commissions",
+    "Complete earning system: daily tasks, spin wheel, login bonus",
+    "VIP membership tiers (Basic/Pro/Premium) with earning multipliers",
+    "Strict India & Nepal region control with VPN/proxy detection",
+    "Anti-fraud: device fingerprinting, auto-freeze, duplicate detection",
+    "Withdrawal safety gate: only processes if revenue exceeds payouts",
+    "Admin emergency controls: STOP button, reward adjustments, revenue dashboard",
+    "4 new earning pages: /earn, /wallet, /referral, /leaderboard",
+    "Data persistence across all version updates",
+    "SEO-optimized with AdSense integration"
+  ],
+  "category": "e-commerce-earning-platform",
+  "tags": [
+    "earning",
+    "digital-store",
+    "referral",
+    "vip",
+    "cyberpunk",
+    "india",
+    "nepal",
+    "anti-fraud"
+  ],
+  "last_updated": "2026-04-08T10:22:36.404Z"
+}

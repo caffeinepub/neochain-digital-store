@@ -10,6 +10,49 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface AdminSettings {
+  'withdrawalEnabled' : boolean,
+  'dailyCapINR' : bigint,
+  'dailyCapNPR' : bigint,
+  'earningEnabled' : boolean,
+  'taskRewardMax' : bigint,
+  'taskRewardMin' : bigint,
+  'rewardMultiplier' : bigint,
+}
+export interface BackupData {
+  'snapshotTime' : Time,
+  'users' : Array<UserProfile>,
+  'totalUsers' : bigint,
+  'transactions' : Array<Transaction>,
+  'totalBalance' : bigint,
+}
+export interface EarningRecord {
+  'dailyEarned' : bigint,
+  'consecutiveLosses' : bigint,
+  'streakDays' : bigint,
+  'lastEarnDate' : bigint,
+  'vipTier' : [] | [string],
+  'lastTaskTime' : bigint,
+}
+export interface FraudLog {
+  'action' : string,
+  'user' : Principal,
+  'timestamp' : bigint,
+  'reason' : string,
+}
+export interface LeaderboardEntry {
+  'username' : string,
+  'user' : Principal,
+  'weeklyPoints' : bigint,
+  'vipTier' : [] | [string],
+}
+export interface Notification {
+  'id' : bigint,
+  'notifType' : string,
+  'createdAt' : bigint,
+  'isRead' : boolean,
+  'message' : string,
+}
 export interface PaymentMethod { 'name' : string, 'description' : string }
 export interface ProductPlan {
   'id' : bigint,
@@ -17,6 +60,11 @@ export interface ProductPlan {
   'name' : string,
   'description' : string,
   'price' : bigint,
+}
+export interface SpinHistory {
+  'totalWon' : bigint,
+  'totalSpins' : bigint,
+  'lastSpin' : bigint,
 }
 export interface SupportTicket {
   'status' : TicketStatus,
@@ -46,51 +94,107 @@ export type TransactionStatus = { 'pending' : null } |
   { 'completed' : null } |
   { 'approved' : null } |
   { 'rejected' : null };
-export type TransactionType = { 'deposit' : null } |
+export type TransactionType = { 'task_reward' : null } |
+  { 'deposit' : null } |
+  { 'vip_purchase' : null } |
+  { 'spin_reward' : null } |
   { 'withdrawal' : null } |
+  { 'login_bonus' : null } |
   { 'referral_bonus' : null } |
   { 'purchase' : null };
 export interface UserProfile {
+  'lastLoginDate' : bigint,
+  'isFrozen' : boolean,
   'referralCode' : string,
+  'frozenReason' : [] | [string],
   'username' : string,
   'balance' : bigint,
+  'loginStreak' : bigint,
   'user' : Principal,
+  'weeklyPoints' : bigint,
   'referralEarnings' : bigint,
   'referredBy' : [] | [Principal],
+  'deviceId' : [] | [string],
+  'totalPoints' : bigint,
+  'vipTier' : [] | [string],
+  'vipExpiry' : [] | [bigint],
 }
 export type UserRole = { 'admin' : null } |
-  { 'user' : null } |
-  { 'guest' : null };
+  { 'user' : null };
+export interface VIPPurchase {
+  'id' : bigint,
+  'status' : VIPStatus,
+  'userName' : string,
+  'paymentMethod' : string,
+  'userEmail' : string,
+  'tier' : string,
+  'user' : Principal,
+  'submittedAt' : bigint,
+  'currency' : string,
+  'amount' : bigint,
+  'screenshot' : string,
+}
+export type VIPStatus = { 'pending' : null } |
+  { 'approved' : null } |
+  { 'rejected' : null };
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addPaymentMethod' : ActorMethod<[PaymentMethod], undefined>,
   'approveTransaction' : ActorMethod<[bigint], undefined>,
-  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'approveVIPPurchase' : ActorMethod<[bigint], undefined>,
+  'assignAdmin' : ActorMethod<[], boolean>,
   'createDepositRequest' : ActorMethod<[bigint, string, string], bigint>,
   'createSupportTicket' : ActorMethod<[string, string, string], bigint>,
+  'freezeUser' : ActorMethod<[Principal, string], undefined>,
+  'getAdminSettings' : ActorMethod<[], AdminSettings>,
   'getAllPaymentMethods' : ActorMethod<[], Array<PaymentMethod>>,
   'getAllProductPlans' : ActorMethod<[], Array<ProductPlan>>,
   'getAllSupportTickets' : ActorMethod<[], Array<SupportTicket>>,
   'getAllTransactions' : ActorMethod<[], Array<Transaction>>,
   'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
-  'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getEarningRecord' : ActorMethod<[Principal], [] | [EarningRecord]>,
+  'getFraudLogs' : ActorMethod<[], Array<FraudLog>>,
+  'getFullBackupData' : ActorMethod<[], BackupData>,
+  'getLeaderboard' : ActorMethod<[], Array<LeaderboardEntry>>,
   'getMyTickets' : ActorMethod<[], Array<SupportTicket>>,
+  'getMyVIPPurchases' : ActorMethod<[], Array<VIPPurchase>>,
+  'getNotifications' : ActorMethod<[], Array<Notification>>,
+  'getPlatformRevenue' : ActorMethod<
+    [],
+    { 'revenue' : bigint, 'canWithdraw' : boolean, 'payouts' : bigint }
+  >,
   'getPlatformStats' : ActorMethod<
     [],
     { 'totalUsers' : bigint, 'totalTransactions' : bigint }
   >,
+  'getSpinHistory' : ActorMethod<[Principal], [] | [SpinHistory]>,
   'getUserBalance' : ActorMethod<[Principal], bigint>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'getVIPPurchases' : ActorMethod<[], Array<VIPPurchase>>,
+  'isUserFrozen' : ActorMethod<[Principal], boolean>,
+  'isWithdrawalAllowed' : ActorMethod<[], boolean>,
+  'markNotificationRead' : ActorMethod<[bigint], undefined>,
   'processPurchase' : ActorMethod<[bigint, [] | [string]], bigint>,
+  'recordFraudLog' : ActorMethod<[Principal, string], undefined>,
+  'recordSpinResult' : ActorMethod<[string, bigint], undefined>,
   'registerUser' : ActorMethod<[string, [] | [string]], UserProfile>,
   'rejectTransaction' : ActorMethod<[bigint], undefined>,
+  'rejectVIPPurchase' : ActorMethod<[bigint], undefined>,
   'removePaymentMethod' : ActorMethod<[string], undefined>,
   'replyToTicket' : ActorMethod<[bigint, string], undefined>,
   'requestWithdrawal' : ActorMethod<[bigint, string, string], bigint>,
   'resolveTicket' : ActorMethod<[bigint], undefined>,
+  'restoreUserBalances' : ActorMethod<[Array<[Principal, bigint]>], bigint>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'sendAdminNotification' : ActorMethod<[Principal, string], undefined>,
+  'submitVIPPurchase' : ActorMethod<
+    [string, bigint, string, string, string, string, string],
+    bigint
+  >,
+  'unfreezeUser' : ActorMethod<[Principal], undefined>,
+  'updateAdminSettings' : ActorMethod<[AdminSettings], undefined>,
+  'updateDailyEarning' : ActorMethod<[Principal, bigint], undefined>,
+  'updatePlatformRevenue' : ActorMethod<[bigint], undefined>,
   'updateUserBalance' : ActorMethod<[Principal, bigint], undefined>,
   'updateUserRole' : ActorMethod<[Principal, UserRole], undefined>,
 }

@@ -1,10 +1,17 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  AdminSettings,
+  EarningRecord,
+  FraudLog,
+  LeaderboardEntry,
+  Notification,
   PaymentMethod,
   ProductPlan,
+  SpinHistory,
   Transaction,
   UserProfile,
+  VIPPurchase,
 } from "../backend.d";
 import type { UserRole } from "../backend.d";
 import { useActor } from "./useActor";
@@ -47,7 +54,8 @@ export function useIsAdmin() {
     queryKey: ["isAdmin"],
     queryFn: async () => {
       if (!actor) return false;
-      return actor.isCallerAdmin();
+      // No isCallerAdmin method; admin auth is handled via password in AdminLoginPage
+      return false;
     },
     enabled: !!actor && !isFetching,
   });
@@ -399,5 +407,333 @@ export function useRestoreUserBalances() {
       qc.invalidateQueries({ queryKey: ["fullBackupData"] });
       qc.invalidateQueries({ queryKey: ["platformStats"] });
     },
+  });
+}
+
+// ─── Earning System Queries ────────────────────────────────────────────────
+
+export function useEarningRecord(user?: Principal) {
+  const { actor, isFetching } = useActor();
+  return useQuery<EarningRecord | null>({
+    queryKey: ["earningRecord", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return null;
+      return actor.getEarningRecord(user);
+    },
+    enabled: !!actor && !isFetching && !!user,
+    staleTime: 15000,
+  });
+}
+
+export function useSpinHistory(user?: Principal) {
+  const { actor, isFetching } = useActor();
+  return useQuery<SpinHistory | null>({
+    queryKey: ["spinHistory", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return null;
+      return actor.getSpinHistory(user);
+    },
+    enabled: !!actor && !isFetching && !!user,
+    staleTime: 15000,
+  });
+}
+
+export function useVIPPurchases() {
+  const { actor, isFetching } = useActor();
+  return useQuery<VIPPurchase[]>({
+    queryKey: ["vipPurchases"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getVIPPurchases();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+  });
+}
+
+export function useMyVIPPurchases() {
+  const { actor, isFetching } = useActor();
+  return useQuery<VIPPurchase[]>({
+    queryKey: ["myVIPPurchases"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getMyVIPPurchases();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+  });
+}
+
+export function useNotifications() {
+  const { actor, isFetching } = useActor();
+  return useQuery<Notification[]>({
+    queryKey: ["notifications"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getNotifications();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 30000,
+  });
+}
+
+export function useAdminSettings() {
+  const { actor, isFetching } = useActor();
+  return useQuery<AdminSettings>({
+    queryKey: ["adminSettings"],
+    queryFn: async () => {
+      if (!actor) {
+        return {
+          earningEnabled: true,
+          dailyCapINR: 2000n,
+          dailyCapNPR: 3000n,
+          taskRewardMin: 10n,
+          taskRewardMax: 50n,
+          rewardMultiplier: 100n,
+          withdrawalEnabled: true,
+        };
+      }
+      return actor.getAdminSettings();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60000,
+  });
+}
+
+export function usePlatformRevenue() {
+  const { actor, isFetching } = useActor();
+  return useQuery<{ revenue: bigint; payouts: bigint; canWithdraw: boolean }>({
+    queryKey: ["platformRevenue"],
+    queryFn: async () => {
+      if (!actor) return { revenue: 0n, payouts: 0n, canWithdraw: false };
+      return actor.getPlatformRevenue();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+  });
+}
+
+export function useIsWithdrawalAllowed() {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isWithdrawalAllowed"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isWithdrawalAllowed();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30000,
+  });
+}
+
+export function useLeaderboard() {
+  const { actor, isFetching } = useActor();
+  return useQuery<LeaderboardEntry[]>({
+    queryKey: ["leaderboard"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getLeaderboard();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60000,
+  });
+}
+
+export function useFraudLogs() {
+  const { actor, isFetching } = useActor();
+  return useQuery<FraudLog[]>({
+    queryKey: ["fraudLogs"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getFraudLogs();
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 60000,
+  });
+}
+
+// ─── Earning System Mutations ──────────────────────────────────────────────
+
+export function useUpdateDailyEarning() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      user,
+      amount,
+    }: { user: Principal; amount: bigint }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.updateDailyEarning(user, amount);
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({
+        queryKey: ["earningRecord", vars.user.toString()],
+      });
+      qc.invalidateQueries({ queryKey: ["userProfile"] });
+    },
+  });
+}
+
+export function useRecordSpinResult() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      result,
+      amountWon,
+    }: { result: string; amountWon: bigint }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.recordSpinResult(result, amountWon);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["userProfile"] });
+      qc.invalidateQueries({ queryKey: ["spinHistory"] });
+    },
+  });
+}
+
+export function useSubmitVIPPurchase() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      tier: string;
+      amount: bigint;
+      currency: string;
+      paymentMethod: string;
+      screenshot: string;
+      userName: string;
+      userEmail: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.submitVIPPurchase(
+        params.tier,
+        params.amount,
+        params.currency,
+        params.paymentMethod,
+        params.screenshot,
+        params.userName,
+        params.userEmail,
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myVIPPurchases"] }),
+  });
+}
+
+export function useApproveVIPPurchase() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.approveVIPPurchase(id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["vipPurchases"] });
+      qc.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+  });
+}
+
+export function useRejectVIPPurchase() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.rejectVIPPurchase(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["vipPurchases"] }),
+  });
+}
+
+export function useMarkNotificationRead() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.markNotificationRead(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+}
+
+export function useSendAdminNotification() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async ({
+      user,
+      message,
+    }: { user: Principal; message: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.sendAdminNotification(user, message);
+    },
+  });
+}
+
+export function useUpdateAdminSettings() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: AdminSettings) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.updateAdminSettings(settings);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminSettings"] }),
+  });
+}
+
+export function useUpdatePlatformRevenue() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (amount: bigint) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.updatePlatformRevenue(amount);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["platformRevenue"] });
+      qc.invalidateQueries({ queryKey: ["isWithdrawalAllowed"] });
+    },
+  });
+}
+
+export function useRecordFraudLog() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      user,
+      reason,
+    }: { user: Principal; reason: string }) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.recordFraudLog(user, reason);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fraudLogs"] }),
+  });
+}
+
+export function useFreezeUser() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (user: Principal) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.freezeUser(user);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allUsers"] }),
+  });
+}
+
+export function useUnfreezeUser() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (user: Principal) => {
+      if (!actor) throw new Error("Not connected");
+      return actor.unfreezeUser(user);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["allUsers"] }),
   });
 }
