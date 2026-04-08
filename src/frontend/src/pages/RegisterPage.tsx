@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { setPageMeta } from "../utils/seo";
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 
@@ -22,7 +23,12 @@ export default function RegisterPage() {
   const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
-    document.title = "Register - NeoChain Digital Store";
+    setPageMeta({
+      title: "Register - NeoChain Digital Store",
+      description:
+        "Create a free NeoChain Digital Store account and start earning through referral commissions and daily rewards.",
+      canonical: "https://neochain-digital-store-x9x.caffeine.xyz/register",
+    });
     // Pre-fill referral from URL param
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");

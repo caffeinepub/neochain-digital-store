@@ -27,6 +27,7 @@ import PrivacyPage from "./pages/PrivacyPage";
 import ProductsPage from "./pages/ProductsPage";
 import RefundPage from "./pages/RefundPage";
 import RegisterPage from "./pages/RegisterPage";
+import SitemapPage from "./pages/SitemapPage";
 import TermsPage from "./pages/TermsPage";
 
 const ADMIN_SESSION_KEY = "neochain_admin_authenticated";
@@ -198,6 +199,11 @@ const termsRoute = createRoute({
   path: "/terms",
   component: TermsPage,
 });
+const sitemapRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/sitemap",
+  component: SitemapPage,
+});
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -211,6 +217,7 @@ const routeTree = rootRoute.addChildren([
   privacyRoute,
   refundRoute,
   termsRoute,
+  sitemapRoute,
 ]);
 const router = createRouter({ routeTree });
 

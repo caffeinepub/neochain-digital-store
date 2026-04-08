@@ -9,6 +9,7 @@ import {
   Send,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { setPageMeta } from "../utils/seo";
 
 const FAQS = [
   {
@@ -51,7 +52,12 @@ export default function ContactPage() {
   const siteEmail = getSiteEmail();
 
   useEffect(() => {
-    document.title = "Contact - NeoChain Digital Store";
+    setPageMeta({
+      title: "Contact - NeoChain Digital Store",
+      description:
+        "Contact NeoChain Digital Store support. Get help with your account, payments, withdrawals, and earning plans.",
+      canonical: "https://neochain-digital-store-x9x.caffeine.xyz/contact",
+    });
   }, []);
 
   const validate = () => {

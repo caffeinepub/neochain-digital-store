@@ -7,6 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect } from "react";
+import { setPageMeta } from "../utils/seo";
 
 const PLANS = [
   {
@@ -117,7 +118,12 @@ const BADGE_STYLE: Record<string, React.CSSProperties> = {
 
 export default function ProductsPage() {
   useEffect(() => {
-    document.title = "Products - NeoChain Digital Store";
+    setPageMeta({
+      title: "Products - NeoChain Digital Store",
+      description:
+        "Browse NeoChain Digital Store earning plans. Choose from Starter, Growth, Pro, and Elite packs and earn 15-20% referral commissions.",
+      canonical: "https://neochain-digital-store-x9x.caffeine.xyz/products",
+    });
   }, []);
 
   return (

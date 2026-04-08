@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Eye, EyeOff, Loader2, LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+import { setPageMeta } from "../utils/seo";
 
 export default function LoginPage() {
   const { login, isLoggingIn, identity, isInitializing } =
@@ -11,7 +12,12 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
 
   useEffect(() => {
-    document.title = "Login - NeoChain Digital Store";
+    setPageMeta({
+      title: "Login - NeoChain Digital Store",
+      description:
+        "Sign in to your NeoChain Digital Store account and access your dashboard, earnings, and referral system.",
+      canonical: "https://neochain-digital-store-x9x.caffeine.xyz/login",
+    });
   }, []);
 
   useEffect(() => {

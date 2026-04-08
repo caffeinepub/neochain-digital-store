@@ -59,7 +59,6 @@ export default function Footer() {
                 <Link
                   to="/"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Home
                 </Link>
@@ -68,7 +67,6 @@ export default function Footer() {
                 <Link
                   to="/login"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Login
                 </Link>
@@ -77,7 +75,6 @@ export default function Footer() {
                 <Link
                   to="/register"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Register
                 </Link>
@@ -86,7 +83,6 @@ export default function Footer() {
                 <Link
                   to="/products"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Products
                 </Link>
@@ -95,7 +91,6 @@ export default function Footer() {
                 <Link
                   to="/mobile-apps"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Mobile Apps
                 </Link>
@@ -104,9 +99,16 @@ export default function Footer() {
                 <Link
                   to="/contact"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Contact
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/sitemap"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Sitemap
                 </Link>
               </li>
             </ul>
@@ -122,7 +124,6 @@ export default function Footer() {
                 <Link
                   to="/products"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Starter Pack (₹1500)
                 </Link>
@@ -131,7 +132,6 @@ export default function Footer() {
                 <Link
                   to="/products"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Growth Pack (₹3000)
                 </Link>
@@ -140,7 +140,6 @@ export default function Footer() {
                 <Link
                   to="/products"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Pro Pack (₹5000)
                 </Link>
@@ -149,7 +148,6 @@ export default function Footer() {
                 <Link
                   to="/products"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Elite Pack (₹8000)
                 </Link>
@@ -167,7 +165,6 @@ export default function Footer() {
                 <Link
                   to="/contact"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Contact Us
                 </Link>
@@ -184,7 +181,6 @@ export default function Footer() {
                 <Link
                   to="/dashboard"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Dashboard
                 </Link>
@@ -193,7 +189,6 @@ export default function Footer() {
                 <Link
                   to="/mobile-apps"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Mobile Apps
                 </Link>
@@ -211,7 +206,6 @@ export default function Footer() {
                 <Link
                   to="/privacy"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Privacy Policy
                 </Link>
@@ -220,7 +214,6 @@ export default function Footer() {
                 <Link
                   to="/refund"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Refund Policy
                 </Link>
@@ -229,7 +222,6 @@ export default function Footer() {
                 <Link
                   to="/terms"
                   className="hover:text-foreground transition-colors"
-                  data-ocid="footer.link"
                 >
                   Terms &amp; Conditions
                 </Link>
@@ -246,47 +238,41 @@ export default function Footer() {
             &copy; {year} NeoChain Digital Store. All rights reserved.
           </span>
           <nav className="flex flex-wrap gap-4" aria-label="Site navigation">
-            <Link
-              to="/"
-              className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
-            >
+            <Link to="/" className="hover:text-cyan-400 transition-colors">
               Home
             </Link>
-            <Link
-              to="/login"
-              className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
-            >
+            <Link to="/login" className="hover:text-cyan-400 transition-colors">
               Login
             </Link>
             <Link
               to="/register"
               className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
             >
               Register
             </Link>
             <Link
               to="/products"
               className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
             >
               Products
             </Link>
             <Link
               to="/mobile-apps"
               className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
             >
               Mobile Apps
             </Link>
             <Link
               to="/contact"
               className="hover:text-cyan-400 transition-colors"
-              data-ocid="footer.link"
             >
               Contact
+            </Link>
+            <Link
+              to="/sitemap"
+              className="hover:text-cyan-400 transition-colors"
+            >
+              Sitemap
             </Link>
           </nav>
           <a

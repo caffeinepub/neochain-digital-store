@@ -36,6 +36,15 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    headers: {
+      "/sitemap.xml": {
+        "Content-Type": "application/xml; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+      "/robots.txt": {
+        "Content-Type": "text/plain; charset=utf-8",
+      },
+    },
   },
   plugins: [
     environment("all", { prefix: "CANISTER_" }),

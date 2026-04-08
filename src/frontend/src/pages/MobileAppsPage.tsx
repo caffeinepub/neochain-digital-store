@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect } from "react";
+import { setPageMeta } from "../utils/seo";
 
 const FEATURES = [
   {
@@ -65,7 +66,12 @@ const TEXT_CLASS: Record<string, string> = {
 
 export default function MobileAppsPage() {
   useEffect(() => {
-    document.title = "Mobile Applications - NeoChain Digital Store";
+    setPageMeta({
+      title: "Mobile Applications - NeoChain Digital Store",
+      description:
+        "Access NeoChain Digital Store on mobile. Earn daily income, spin the reward wheel, and manage referrals from any device.",
+      canonical: "https://neochain-digital-store-x9x.caffeine.xyz/mobile-apps",
+    });
   }, []);
 
   return (
